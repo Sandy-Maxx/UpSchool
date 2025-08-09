@@ -1,281 +1,251 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { authService } from '../../services/api/auth';
-import { PortalType } from '../../types';
-import { apiSlice } from './apiSlice';
+import { api } from '../../services/api/client';
+import { AUTH_CONFIG } from '../../constants';
+import type { 
+  AuthState, 
+  User, 
+  Tenant, 
+  LoginCredentials, 
+  LoginResponse 
+} from '../../types';
 
-export interface User {
-  id: number;
-  username: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  role: string;
-  permissions: string[];
-  school?: {
-    id: number;
-    name: string;
-    tenant: {
-      id: number;
-      name: string;
-      subdomain: string;
-    };
-  };
-}
-
-export interface Session {
-  id: string;
-  expires_at: string;
-  last_activity: string;
-  ip_address?: string;
-  user_agent?: string;
-}
-
-interface AuthState {
-  user: User | null;
-  token: string | null;
-  refreshToken: string | null;
-  isAuthenticated: boolean;
-  loading: boolean;
-  error: string | null;
-  session: Session | null;
-  portalType: PortalType;
-  permissions: string[];
-  sessionExpiry: number | null;
-  isRefreshing: boolean;
-}
-
-// Helper to detect portal type from hostname
-const detectPortalType = (): PortalType => {
-  if (typeof window === 'undefined') return 'saas';
-  const hostname = window.location.hostname;
-  return hostname === 'localhost' || hostname.includes('erp-platform') ? 'saas' : 'tenant';
-};
-
+// Initial state
 const initialState: AuthState = {
+  isAuthenticated: false,
   user: null,
-  token: localStorage.getItem('token'),
-  refreshToken: localStorage.getItem('refresh_token'),
-  isAuthenticated: !!localStorage.getItem('token'),
+  tenant: null,
+  tokens: {
+    access: null,
+    refresh: null,
+  },
+  permissions: [],
   loading: false,
   error: null,
-  session: null,
-  portalType: detectPortalType(),
-  permissions: [],
-  sessionExpiry: null,
-  isRefreshing: false,
 };
 
-export const login = createAsyncThunk(
+// Async thunks
+export const loginAsync = createAsyncThunk(
   'auth/login',
-  async (credentials: { username: string; password: string }, { rejectWithValue }) => {
+  async (credentials: LoginCredentials, { rejectWithValue }) => {
     try {
-      const response = await authService.login(credentials);
-      localStorage.setItem('token', response.token);
-      return response;
+      const response = await api.post<LoginResponse>('/api/v1/accounts/login/', credentials);
+      
+      // Store tokens in API client
+      api.setTokens(response.data.access, response.data.refresh);
+      
+      return response.data;
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Login failed');
+      return rejectWithValue(error.message || 'Login failed');
     }
   }
 );
 
-export const logout = createAsyncThunk('auth/logout', async (_, { rejectWithValue }) => {
-  try {
-    await authService.logout();
-    localStorage.removeItem('token');
-    return null;
-  } catch (error: any) {
-    localStorage.removeItem('token');
-    return rejectWithValue(error.response?.data?.message || 'Logout failed');
-  }
-});
+export const refreshTokenAsync = createAsyncThunk(
+  'auth/refreshToken',
+  async (_, { getState, rejectWithValue }) => {
+    try {
+      const state = getState() as { auth: AuthState };
+      const refreshToken = state.auth.tokens.refresh;
+      
+      if (!refreshToken) {
+        throw new Error('No refresh token available');
+      }
 
-export const getCurrentUser = createAsyncThunk(
+      const response = await api.post<{ access: string }>('/api/v1/accounts/token/refresh/', {
+        refresh: refreshToken,
+      });
+      
+      return response.data.access;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Token refresh failed');
+    }
+  }
+);
+
+export const getCurrentUserAsync = createAsyncThunk(
   'auth/getCurrentUser',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await authService.getCurrentUser();
-      return response;
+      const response = await api.get<User>('/api/v1/accounts/me/');
+      return response.data;
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to get user');
+      return rejectWithValue(error.message || 'Failed to get current user');
     }
   }
 );
 
-export const refreshToken = createAsyncThunk(
-  'auth/refreshToken',
+export const logoutAsync = createAsyncThunk(
+  'auth/logout',
   async (_, { getState, rejectWithValue }) => {
-    const state = getState() as { auth: AuthState };
-    const { refreshToken: token } = state.auth;
-
-    if (!token) {
-      return rejectWithValue('No refresh token available');
-    }
-
     try {
-      const response = await authService.refreshToken(token);
-      localStorage.setItem('token', response.token);
-      localStorage.setItem('refresh_token', response.refresh_token);
-      return response;
+      const state = getState() as { auth: AuthState };
+      const refreshToken = state.auth.tokens.refresh;
+      
+      if (refreshToken) {
+        await api.post('/api/v1/accounts/logout/', { refresh: refreshToken });
+      }
+      
+      // Clear tokens from API client
+      api.logout();
+      
+      return null;
     } catch (error: any) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('refresh_token');
-      return rejectWithValue(error.response?.data?.message || 'Token refresh failed');
+      // Even if logout fails, we should clear local tokens
+      api.logout();
+      return null;
     }
   }
 );
 
-export const validateSession = createAsyncThunk(
-  'auth/validateSession',
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await authService.validateSession();
-      return response;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Session validation failed');
-    }
-  }
-);
-
-const authSlice = createSlice({
+// Auth slice
+export const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    clearError: state => {
+    // Set authentication state from stored data
+    setAuthFromStorage: (state, action: PayloadAction<{ 
+      user: User; 
+      tenant?: Tenant; 
+      permissions: string[];
+      tokens: { access: string; refresh: string };
+    }>) => {
+      const { user, tenant, permissions, tokens } = action.payload;
+      state.isAuthenticated = true;
+      state.user = user;
+      state.tenant = tenant || null;
+      state.permissions = permissions;
+      state.tokens = tokens;
       state.error = null;
     },
-    setToken: (state, action: PayloadAction<string>) => {
-      state.token = action.payload;
-      state.isAuthenticated = true;
-      localStorage.setItem('token', action.payload);
+
+    // Update user profile
+    updateUserProfile: (state, action: PayloadAction<Partial<User>>) => {
+      if (state.user) {
+        state.user = { ...state.user, ...action.payload };
+      }
     },
-    setRefreshToken: (state, action: PayloadAction<string>) => {
-      state.refreshToken = action.payload;
-      localStorage.setItem('refresh_token', action.payload);
-    },
-    setPortalType: (state, action: PayloadAction<PortalType>) => {
-      state.portalType = action.payload;
-    },
-    setPermissions: (state, action: PayloadAction<string[]>) => {
+
+    // Update permissions
+    updatePermissions: (state, action: PayloadAction<string[]>) => {
       state.permissions = action.payload;
     },
-    setSession: (state, action: PayloadAction<Session>) => {
-      state.session = action.payload;
-      state.sessionExpiry = new Date(action.payload.expires_at).getTime();
+
+    // Set tenant context
+    setTenant: (state, action: PayloadAction<Tenant>) => {
+      state.tenant = action.payload;
     },
-    clearSession: state => {
-      state.user = null;
-      state.token = null;
-      state.refreshToken = null;
-      state.isAuthenticated = false;
-      state.session = null;
-      state.permissions = [];
-      state.sessionExpiry = null;
-      localStorage.removeItem('token');
-      localStorage.removeItem('refresh_token');
+
+    // Clear error
+    clearError: (state) => {
+      state.error = null;
     },
-    setIsRefreshing: (state, action: PayloadAction<boolean>) => {
-      state.isRefreshing = action.payload;
+
+    // Clear auth state
+    clearAuth: (state) => {
+      return { ...initialState };
+    },
+
+    // Update access token
+    updateAccessToken: (state, action: PayloadAction<string>) => {
+      state.tokens.access = action.payload;
     },
   },
-  extraReducers: builder => {
+  extraReducers: (builder) => {
+    // Login
     builder
-      // Login
-      .addCase(login.pending, state => {
+      .addCase(loginAsync.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(login.fulfilled, (state, action) => {
+      .addCase(loginAsync.fulfilled, (state, action) => {
+        const { access, refresh, user, tenant, permissions } = action.payload;
+        
         state.loading = false;
-        state.user = action.payload.user;
-        state.token = action.payload.token;
         state.isAuthenticated = true;
+        state.user = user;
+        state.tenant = tenant || null;
+        state.permissions = permissions;
+        state.tokens = { access, refresh };
+        state.error = null;
+
+        // Store user data in localStorage for persistence
+        localStorage.setItem(AUTH_CONFIG.USER_STORAGE_KEY, JSON.stringify({
+          user,
+          tenant,
+          permissions,
+          tokens: { access, refresh },
+        }));
       })
-      .addCase(login.rejected, (state, action) => {
+      .addCase(loginAsync.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
-      })
-      // Logout
-      .addCase(logout.pending, state => {
-        state.loading = true;
-      })
-      .addCase(logout.fulfilled, state => {
-        state.loading = false;
-        state.user = null;
-        state.token = null;
         state.isAuthenticated = false;
+      });
+
+    // Token refresh
+    builder
+      .addCase(refreshTokenAsync.fulfilled, (state, action) => {
+        state.tokens.access = action.payload;
+        
+        // Update stored tokens
+        const storedData = localStorage.getItem(AUTH_CONFIG.USER_STORAGE_KEY);
+        if (storedData) {
+          try {
+            const parsed = JSON.parse(storedData);
+            parsed.tokens.access = action.payload;
+            localStorage.setItem(AUTH_CONFIG.USER_STORAGE_KEY, JSON.stringify(parsed));
+          } catch (error) {
+            console.error('Failed to update stored token:', error);
+          }
+        }
       })
-      .addCase(logout.rejected, (state, action) => {
-        state.loading = false;
-        state.user = null;
-        state.token = null;
-        state.isAuthenticated = false;
-        state.error = action.payload as string;
-      })
-      // Get Current User
-      .addCase(getCurrentUser.pending, state => {
-        state.loading = true;
-      })
-      .addCase(getCurrentUser.fulfilled, (state, action) => {
-        state.loading = false;
+      .addCase(refreshTokenAsync.rejected, (state) => {
+        // Token refresh failed, clear auth state
+        return { ...initialState };
+      });
+
+    // Get current user
+    builder
+      .addCase(getCurrentUserAsync.fulfilled, (state, action) => {
         state.user = action.payload;
-        state.permissions = action.payload.permissions || [];
-        state.isAuthenticated = true;
+        
+        // Update stored user data
+        const storedData = localStorage.getItem(AUTH_CONFIG.USER_STORAGE_KEY);
+        if (storedData) {
+          try {
+            const parsed = JSON.parse(storedData);
+            parsed.user = action.payload;
+            localStorage.setItem(AUTH_CONFIG.USER_STORAGE_KEY, JSON.stringify(parsed));
+          } catch (error) {
+            console.error('Failed to update stored user:', error);
+          }
+        }
       })
-      .addCase(getCurrentUser.rejected, (state, action) => {
-        state.loading = false;
-        state.user = null;
-        state.token = null;
-        state.isAuthenticated = false;
-        state.permissions = [];
-        state.error = action.payload as string;
-      })
-      // Refresh Token
-      .addCase(refreshToken.pending, state => {
-        state.isRefreshing = true;
-        state.error = null;
-      })
-      .addCase(refreshToken.fulfilled, (state, action) => {
-        state.isRefreshing = false;
-        state.token = action.payload.token;
-        state.refreshToken = action.payload.refresh_token;
-        state.isAuthenticated = true;
-      })
-      .addCase(refreshToken.rejected, (state, action) => {
-        state.isRefreshing = false;
-        state.user = null;
-        state.token = null;
-        state.refreshToken = null;
-        state.isAuthenticated = false;
-        state.permissions = [];
-        state.session = null;
-        state.sessionExpiry = null;
-        state.error = action.payload as string;
-      })
-      // Validate Session
-      .addCase(validateSession.pending, state => {
-        state.loading = true;
-      })
-      .addCase(validateSession.fulfilled, (state, action) => {
-        state.loading = false;
-        state.session = action.payload;
-        state.sessionExpiry = new Date(action.payload.expires_at).getTime();
-      })
-      .addCase(validateSession.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string;
+      .addCase(getCurrentUserAsync.rejected, (state) => {
+        // User fetch failed, might be session expired
+        state.error = 'Failed to verify user session';
+      });
+
+    // Logout
+    builder
+      .addCase(logoutAsync.fulfilled, (state) => {
+        // Clear localStorage
+        localStorage.removeItem(AUTH_CONFIG.USER_STORAGE_KEY);
+        return { ...initialState };
       });
   },
 });
 
+// Export actions
 export const {
+  setAuthFromStorage,
+  updateUserProfile,
+  updatePermissions,
+  setTenant,
   clearError,
-  setToken,
-  setRefreshToken,
-  setPortalType,
-  setPermissions,
-  setSession,
-  clearSession,
-  setIsRefreshing,
+  clearAuth,
+  updateAccessToken,
 } = authSlice.actions;
 
+// Export reducer
 export default authSlice.reducer;

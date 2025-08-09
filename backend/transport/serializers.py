@@ -10,73 +10,68 @@ from .models import (
 
 class VehicleSerializer(serializers.ModelSerializer):
     """
-    Serializer for Vehicle model.
+    Serializer for Vehicle model aligned with current fields.
     """
-    driver_name = serializers.ReadOnlyField(source='driver.get_full_name')
     status_display = serializers.ReadOnlyField(source='get_status_display')
-    fuel_type_display = serializers.ReadOnlyField(source='get_fuel_type_display')
 
     class Meta:
         model = Vehicle
         fields = [
-            'id', 'registration_number', 'model', 'make', 'year', 'capacity',
-            'fuel_type', 'fuel_type_display', 'status', 'status_display',
-            'driver', 'driver_name', 'insurance_expiry', 'fitness_expiry',
-            'permit_expiry', 'last_service_date', 'next_service_date',
-            'mileage', 'fuel_efficiency', 'school', 'created_at', 'updated_at'
+            'id', 'vehicle_number', 'registration_number', 'make', 'model', 'year',
+            'vehicle_type', 'capacity', 'color', 'fuel_type', 'status', 'status_display',
+            'insurance_expiry', 'permit_expiry', 'fitness_expiry', 'school',
+            'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 
 class DriverSerializer(serializers.ModelSerializer):
     """
-    Serializer for Driver model.
+    Serializer for Driver model. Exposes basic user info via related user.
     """
-    vehicle_count = serializers.ReadOnlyField()
-    status_display = serializers.ReadOnlyField(source='get_status_display')
+    full_name = serializers.ReadOnlyField(source='user.get_full_name')
+    email = serializers.ReadOnlyField(source='user.email')
 
     class Meta:
         model = Driver
         fields = [
-            'id', 'first_name', 'last_name', 'email', 'phone', 'address',
-            'license_number', 'license_type', 'license_expiry', 'status',
-            'status_display', 'experience_years', 'emergency_contact',
-            'emergency_phone', 'medical_certificate_expiry', 'background_check_date',
-            'school', 'vehicle_count', 'created_at', 'updated_at'
+            'id', 'user', 'full_name', 'email', 'driver_id', 'license_number',
+            'license_type', 'license_expiry', 'experience_years', 'status',
+            'emergency_contact', 'emergency_contact_name', 'school',
+            'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'vehicle_count']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'full_name', 'email']
 
 
 class RouteStopSerializer(serializers.ModelSerializer):
     """
-    Serializer for RouteStop model.
+    Serializer for RouteStop model aligned with current fields.
     """
     class Meta:
         model = RouteStop
         fields = [
-            'id', 'route', 'name', 'address', 'latitude', 'longitude',
-            'stop_order', 'pickup_time', 'drop_time', 'created_at', 'updated_at'
+            'id', 'route', 'stop_name', 'stop_address', 'sequence_order',
+            'arrival_time', 'departure_time', 'latitude', 'longitude',
+            'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 
 class RouteSerializer(serializers.ModelSerializer):
     """
-    Serializer for Route model.
+    Serializer for Route model aligned with current fields.
     """
     stops = RouteStopSerializer(many=True, read_only=True)
-    vehicle_count = serializers.ReadOnlyField()
-    student_count = serializers.ReadOnlyField()
 
     class Meta:
         model = Route
         fields = [
-            'id', 'name', 'description', 'start_location', 'end_location',
-            'distance_km', 'estimated_duration', 'vehicle', 'driver',
-            'status', 'stops', 'vehicle_count', 'student_count',
-            'school', 'created_at', 'updated_at'
+            'id', 'route_number', 'route_name', 'description', 'start_location',
+            'end_location', 'distance_km', 'estimated_duration_minutes',
+            'departure_time', 'arrival_time', 'status', 'stops', 'school',
+            'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'vehicle_count', 'student_count']
+        read_only_fields = ['id', 'created_at', 'updated_at']
 
 
 class TransportAssignmentSerializer(serializers.ModelSerializer):
@@ -84,14 +79,14 @@ class TransportAssignmentSerializer(serializers.ModelSerializer):
     Serializer for TransportAssignment model.
     """
     vehicle_registration = serializers.ReadOnlyField(source='vehicle.registration_number')
-    driver_name = serializers.ReadOnlyField(source='driver.get_full_name')
-    route_name = serializers.ReadOnlyField(source='route.name')
+    driver_name = serializers.ReadOnlyField(source='driver.user.get_full_name')
+    route_number = serializers.ReadOnlyField(source='route.route_number')
 
     class Meta:
         model = TransportAssignment
         fields = [
             'id', 'vehicle', 'vehicle_registration', 'driver', 'driver_name',
-            'route', 'route_name', 'assignment_date', 'status', 'notes',
+            'route', 'route_number', 'assignment_date', 'status', 'notes',
             'school', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
@@ -99,118 +94,76 @@ class TransportAssignmentSerializer(serializers.ModelSerializer):
 
 class StudentTransportSerializer(serializers.ModelSerializer):
     """
-    Serializer for StudentTransport model.
+    Serializer for StudentTransport model aligned with current fields.
     """
-    student_name = serializers.ReadOnlyField(source='student.get_full_name')
-    route_name = serializers.ReadOnlyField(source='route.name')
-    vehicle_registration = serializers.ReadOnlyField(source='vehicle.registration_number')
-    driver_name = serializers.ReadOnlyField(source='driver.get_full_name')
+    student_name = serializers.ReadOnlyField(source='student.user.get_full_name')
+    route_number = serializers.ReadOnlyField(source='route.route_number')
     status_display = serializers.ReadOnlyField(source='get_status_display')
 
     class Meta:
         model = StudentTransport
         fields = [
-            'id', 'student', 'student_name', 'route', 'route_name',
-            'vehicle', 'vehicle_registration', 'driver', 'driver_name',
-            'pickup_stop', 'drop_stop', 'pickup_time', 'drop_time',
-            'status', 'status_display', 'start_date', 'end_date',
-            'fee_amount', 'payment_status', 'school', 'created_at', 'updated_at'
+            'id', 'student', 'student_name', 'route', 'route_number',
+            'pickup_stop', 'dropoff_stop', 'status', 'status_display',
+            'transport_fee', 'fee_frequency', 'school', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 
 class TransportTrackingSerializer(serializers.ModelSerializer):
     """
-    Serializer for TransportTracking model.
+    Serializer for TransportTracking model aligned with current fields.
     """
-    vehicle_registration = serializers.ReadOnlyField(source='vehicle.registration_number')
-    driver_name = serializers.ReadOnlyField(source='driver.get_full_name')
+    route_number = serializers.ReadOnlyField(source='assignment.route.route_number')
+    vehicle_registration = serializers.ReadOnlyField(source='assignment.vehicle.registration_number')
+    driver_name = serializers.ReadOnlyField(source='assignment.driver.user.get_full_name')
 
     class Meta:
         model = TransportTracking
         fields = [
-            'id', 'vehicle', 'vehicle_registration', 'driver', 'driver_name',
-            'route', 'latitude', 'longitude', 'speed', 'heading', 'timestamp',
-            'status', 'school', 'created_at'
+            'id', 'assignment', 'tracking_date', 'status',
+            'actual_departure_time', 'actual_arrival_time',
+            'current_latitude', 'current_longitude', 'current_location',
+            'delay_minutes', 'notes', 'route_number', 'vehicle_registration',
+            'driver_name', 'school', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'route_number', 'vehicle_registration', 'driver_name']
 
 
 class TransportIncidentSerializer(serializers.ModelSerializer):
     """
-    Serializer for TransportIncident model.
+    Serializer for TransportIncident model aligned with current fields.
     """
-    vehicle_registration = serializers.ReadOnlyField(source='vehicle.registration_number')
-    driver_name = serializers.ReadOnlyField(source='driver.get_full_name')
-    severity_display = serializers.ReadOnlyField(source='get_severity_display')
-    status_display = serializers.ReadOnlyField(source='get_status_display')
+    route_number = serializers.ReadOnlyField(source='assignment.route.route_number')
+    vehicle_registration = serializers.ReadOnlyField(source='assignment.vehicle.registration_number')
+    driver_name = serializers.ReadOnlyField(source='assignment.driver.user.get_full_name')
 
     class Meta:
         model = TransportIncident
         fields = [
-            'id', 'vehicle', 'vehicle_registration', 'driver', 'driver_name',
-            'route', 'incident_type', 'description', 'location', 'latitude',
-            'longitude', 'severity', 'severity_display', 'status', 'status_display',
-            'incident_date', 'reported_date', 'resolved_date', 'resolution_notes',
-            'involved_students', 'school', 'created_at', 'updated_at'
+            'id', 'assignment', 'incident_type', 'severity', 'title', 'description',
+            'incident_date', 'incident_time', 'location', 'latitude', 'longitude',
+            'resolved', 'resolution_notes', 'resolved_by', 'resolved_at',
+            'route_number', 'vehicle_registration', 'driver_name',
+            'school', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'route_number', 'vehicle_registration', 'driver_name']
 
 
 class TransportSettingsSerializer(serializers.ModelSerializer):
     """
-    Serializer for TransportSettings model.
+    Serializer for TransportSettings model aligned with current fields.
     """
     school_name = serializers.ReadOnlyField(source='school.name')
 
     class Meta:
         model = TransportSettings
         fields = [
-            'id', 'school', 'school_name', 'enable_tracking', 'tracking_interval',
-            'max_route_distance', 'max_students_per_vehicle', 'safety_check_interval',
-            'maintenance_reminder_days', 'insurance_reminder_days', 'license_reminder_days',
-            'enable_notifications', 'notification_recipients', 'created_at', 'updated_at'
+            'id', 'school', 'school_name',
+            'enable_gps_tracking', 'tracking_interval_minutes',
+            'enable_notifications',
+            'max_speed_limit', 'enable_speed_alerts', 'enable_route_deviation_alerts',
+            'send_delay_notifications', 'send_arrival_notifications', 'send_incident_notifications',
+            'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
-
-
-class RouteCreateSerializer(serializers.ModelSerializer):
-    """
-    Serializer for creating routes with stops.
-    """
-    stops = RouteStopSerializer(many=True)
-
-    class Meta:
-        model = Route
-        fields = [
-            'name', 'description', 'start_location', 'end_location',
-            'distance_km', 'estimated_duration', 'vehicle', 'driver', 'stops'
-        ]
-
-    def create(self, validated_data):
-        stops_data = validated_data.pop('stops')
-        route = Route.objects.create(**validated_data)
-        
-        for stop_data in stops_data:
-            RouteStop.objects.create(route=route, **stop_data)
-        
-        return route
-
-
-class StudentTransportCreateSerializer(serializers.ModelSerializer):
-    """
-    Serializer for creating student transport assignments.
-    """
-    class Meta:
-        model = StudentTransport
-        fields = [
-            'student', 'route', 'pickup_stop', 'drop_stop',
-            'pickup_time', 'drop_time', 'start_date', 'end_date', 'fee_amount'
-        ]
-
-    def create(self, validated_data):
-        # Auto-assign vehicle and driver from route
-        route = validated_data['route']
-        validated_data['vehicle'] = route.vehicle
-        validated_data['driver'] = route.driver
-        return super().create(validated_data) 
+        read_only_fields = ['id', 'created_at', 'updated_at', 'school_name']

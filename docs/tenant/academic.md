@@ -1,6 +1,10 @@
-# Academic Management System (Stage 4.2)
+# Academic Management System (Future - Stage 4.2)
 
-This document describes the frontend academic module for the Tenant Portal.
+**Current Status**: Not Implemented - Planned for Future Development
+**Stage 1 Status**: ✅ Foundation Complete
+**Next Phase**: Stage 2 - Authentication & RBAC (Required first)
+
+This document describes the planned frontend academic module for the Tenant Portal.
 
 Scope
 - Grade and class structure management
@@ -31,9 +35,20 @@ Testing
 RBAC
 - All components are wrapped with PermissionGate and require resource "academic" with action "view".
 
-Next Steps
-- Replace useAcademicService with RTK Query selectors and backend endpoints when available.
-- Add CRUD forms and mutations for: grades, subjects, teacher assignments, timetable generation, exams, and calendar events.
-- Add route entries and navigation links in Tenant Portal to expose the pages.
-- Expand tests to cover CRUD flows and edge cases.
+Development Roadmap
+
+This module is planned for **Stage 4.2: Academic Management System** development.
+
+**Prerequisites (Must Complete First):**
+- ✅ Stage 1: Foundation & Core Infrastructure (COMPLETED)
+- ⏳ Stage 2: Dual Authentication & RBAC System
+- ⏳ Stage 3: Dual Portal Dashboards
+- ⏳ Stage 4.1: Student Information System (SIS)
+
+**Future Implementation Steps:**
+- Replace useAcademicService with RTK Query selectors and backend endpoints
+- Add CRUD forms and mutations for: grades, subjects, teacher assignments, timetable generation, exams, and calendar events
+- Add route entries and navigation links in Tenant Portal to expose the pages
+- Expand tests to cover CRUD flows and edge cases
+- Integrate with the completed RBAC system for proper permission checking
 

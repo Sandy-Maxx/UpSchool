@@ -1,125 +1,200 @@
-import { createListenerMiddleware, isAnyOf } from '@reduxjs/toolkit';
-import { refreshToken, setIsRefreshing, clearSession } from '../slices/authSlice';
-import type { RootState } from '../index';
+import { Middleware, AnyAction } from '@reduxjs/toolkit';
+import { refreshTokenAsync, clearAuth, setAuthFromStorage } from '../slices/authSlice';
+import { addErrorNotification } from '../slices/notificationSlice';
+import { AUTH_CONFIG, ERROR_MESSAGES } from '../../constants';
 
-// Create the middleware instance
-export const sessionMiddleware = createListenerMiddleware();
+/**
+ * Session middleware for automatic token management and session monitoring
+ */
+export const sessionMiddleware: Middleware = (store) => (next) => (action: unknown) => {
+  const result = next(action);
+  
+  // Initialize auth state from localStorage on app start
+  if ((action as AnyAction).type === '@@INIT' || (action as AnyAction).type === 'persist/REHYDRATE') {
+    initializeAuthFromStorage(store);
+  }
 
-// Session expiry check interval (5 minutes)
-const SESSION_CHECK_INTERVAL = 5 * 60 * 1000;
+  // Handle auth failures
+  if ((action as AnyAction).type === 'auth/failure') {
+    handleAuthFailure(store);
+  }
 
-// Token refresh threshold (refresh when less than 10 minutes remaining)
-const REFRESH_THRESHOLD = 10 * 60 * 1000;
+  // Monitor session expiry
+  if ((action as AnyAction).type && (action as AnyAction).type.startsWith('auth/')) {
+    monitorSessionExpiry(store);
+  }
 
-// Auto-refresh logic
-sessionMiddleware.startListening({
-  predicate: (action, currentState, previousState) => {
-    const state = currentState as RootState;
-    const prevState = previousState as RootState;
+  return result;
+};
 
-    // Check if user just became authenticated or session changed
-    return (
-      state.auth.isAuthenticated &&
-      (!prevState.auth.isAuthenticated || state.auth.sessionExpiry !== prevState.auth.sessionExpiry)
-    );
-  },
-  effect: async (action, listenerApi) => {
-    const { dispatch, getState } = listenerApi;
+/**
+ * Initialize authentication state from localStorage
+ */
+function initializeAuthFromStorage(store: any) {
+  try {
+    const storedData = localStorage.getItem(AUTH_CONFIG.USER_STORAGE_KEY);
+    
+    if (storedData) {
+      const parsed = JSON.parse(storedData);
+      const { user, tenant, permissions, tokens } = parsed;
 
-    // Set up periodic session checking
-    const checkSession = () => {
-      const state = getState() as RootState;
-      const { sessionExpiry, isRefreshing, isAuthenticated } = state.auth;
+      // Validate required fields
+      if (user && tokens?.access && tokens?.refresh) {
+        // Check if token is expired
+        const tokenPayload = parseJWT(tokens.access);
+        const currentTime = Date.now() / 1000;
 
-      if (!isAuthenticated || isRefreshing || !sessionExpiry) {
-        return;
-      }
+        if (tokenPayload && tokenPayload.exp > currentTime) {
+          // Token is still valid, restore auth state
+          store.dispatch(setAuthFromStorage({
+            user,
+            tenant,
+            permissions: permissions || [],
+            tokens,
+          }));
 
-      const now = Date.now();
-      const timeUntilExpiry = sessionExpiry - now;
+          // Set up token refresh if needed
+          const timeUntilExpiry = (tokenPayload.exp * 1000) - Date.now();
+          const refreshThreshold = AUTH_CONFIG.REFRESH_THRESHOLD;
 
-      // If session has expired, clear it
-      if (timeUntilExpiry <= 0) {
-        dispatch(clearSession());
-        return;
-      }
-
-      // If session is close to expiry, refresh the token
-      if (timeUntilExpiry <= REFRESH_THRESHOLD) {
-        dispatch(refreshToken());
-      }
-    };
-
-    // Check immediately
-    checkSession();
-
-    // Set up interval for periodic checks
-    const intervalId = setInterval(checkSession, SESSION_CHECK_INTERVAL);
-
-    // Clean up when user logs out or session is cleared
-    await listenerApi.condition((action, currentState) => {
-      const state = currentState as RootState;
-      return !state.auth.isAuthenticated;
-    });
-
-    clearInterval(intervalId);
-  },
-});
-
-// Handle failed token refresh
-sessionMiddleware.startListening({
-  actionCreator: refreshToken.rejected,
-  effect: async (action, listenerApi) => {
-    const { dispatch } = listenerApi;
-
-    // If refresh failed, clear the session
-    dispatch(clearSession());
-
-    // Optionally redirect to login
-    if (typeof window !== 'undefined') {
-      // Check if we're not already on a login page
-      const currentPath = window.location.pathname;
-      const loginPaths = ['/login', '/auth', '/signin'];
-
-      if (!loginPaths.some(path => currentPath.includes(path))) {
-        window.location.href = '/login';
+          if (timeUntilExpiry < refreshThreshold) {
+            // Token expires soon, refresh it
+            store.dispatch(refreshTokenAsync());
+          } else {
+            // Set up timer to refresh token before expiry
+            setTimeout(() => {
+              const state = store.getState();
+              if (state.auth.isAuthenticated) {
+                store.dispatch(refreshTokenAsync());
+              }
+            }, timeUntilExpiry - refreshThreshold);
+          }
+        } else {
+          // Token is expired, try to refresh
+          if (tokens.refresh) {
+            store.dispatch(refreshTokenAsync());
+          } else {
+            // No refresh token, clear auth
+            localStorage.removeItem(AUTH_CONFIG.USER_STORAGE_KEY);
+          }
+        }
       }
     }
-  },
-});
+  } catch (error) {
+    console.error('Failed to initialize auth from storage:', error);
+    localStorage.removeItem(AUTH_CONFIG.USER_STORAGE_KEY);
+  }
+}
 
-// Handle successful token refresh
-sessionMiddleware.startListening({
-  actionCreator: refreshToken.fulfilled,
-  effect: async (action, listenerApi) => {
-    console.log('Token refreshed successfully');
+/**
+ * Handle authentication failures
+ */
+function handleAuthFailure(store: any) {
+  store.dispatch(clearAuth());
+  store.dispatch(addErrorNotification({
+    title: 'Session Expired',
+    message: ERROR_MESSAGES.SESSION_EXPIRED,
+  }));
 
-    // Optionally dispatch a notification or update UI
-    // dispatch(addNotification({
-    //   type: 'info',
-    //   message: 'Session refreshed',
-    //   duration: 3000
-    // }));
-  },
-});
+  // Redirect to login if not already there
+  if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+    // Use setTimeout to avoid dispatching during render
+    setTimeout(() => {
+      window.location.href = '/auth/login';
+    }, 100);
+  }
+}
 
-// Handle token refresh start
-sessionMiddleware.startListening({
-  actionCreator: refreshToken.pending,
-  effect: async (action, listenerApi) => {
-    const { dispatch } = listenerApi;
-    dispatch(setIsRefreshing(true));
-  },
-});
+/**
+ * Monitor session expiry and set up automatic refresh
+ */
+function monitorSessionExpiry(store: any) {
+  const state = store.getState();
+  
+  if (!state.auth.isAuthenticated || !state.auth.tokens.access) {
+    return;
+  }
 
-// Handle token refresh completion (success or failure)
-sessionMiddleware.startListening({
-  matcher: isAnyOf(refreshToken.fulfilled, refreshToken.rejected),
-  effect: async (action, listenerApi) => {
-    const { dispatch } = listenerApi;
-    dispatch(setIsRefreshing(false));
-  },
-});
+  try {
+    const tokenPayload = parseJWT(state.auth.tokens.access);
+    
+    if (tokenPayload) {
+      const currentTime = Date.now() / 1000;
+      const timeUntilExpiry = (tokenPayload.exp * 1000) - Date.now();
+      const refreshThreshold = AUTH_CONFIG.REFRESH_THRESHOLD;
 
-// Export the middleware
-export default sessionMiddleware;
+      if (timeUntilExpiry < 0) {
+        // Token is already expired
+        handleAuthFailure(store);
+      } else if (timeUntilExpiry < refreshThreshold) {
+        // Token expires soon, refresh immediately
+        store.dispatch(refreshTokenAsync());
+      } else {
+        // Set up timer to refresh token before expiry
+        setTimeout(() => {
+          const currentState = store.getState();
+          if (currentState.auth.isAuthenticated) {
+            store.dispatch(refreshTokenAsync());
+          }
+        }, timeUntilExpiry - refreshThreshold);
+      }
+    }
+  } catch (error) {
+    console.error('Failed to monitor session expiry:', error);
+  }
+}
+
+/**
+ * Parse JWT token to get payload
+ */
+function parseJWT(token: string): { exp: number; [key: string]: any } | null {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map(function (c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        })
+        .join('')
+    );
+
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    console.error('Failed to parse JWT token:', error);
+    return null;
+  }
+}
+
+/**
+ * Listen for custom auth events
+ */
+if (typeof window !== 'undefined') {
+  window.addEventListener('auth:failure', () => {
+    // This will be handled by the middleware when dispatched
+  });
+
+  // Handle browser tab visibility changes
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      // Tab became visible, check session validity
+      const storedData = localStorage.getItem(AUTH_CONFIG.USER_STORAGE_KEY);
+      
+      if (storedData) {
+        try {
+          const parsed = JSON.parse(storedData);
+          const tokenPayload = parseJWT(parsed.tokens?.access);
+          const currentTime = Date.now() / 1000;
+
+          if (!tokenPayload || tokenPayload.exp < currentTime) {
+            // Token expired while tab was hidden, trigger auth failure
+            window.dispatchEvent(new CustomEvent('auth:failure'));
+          }
+        } catch (error) {
+          console.error('Failed to validate session on tab focus:', error);
+        }
+      }
+    }
+  });
+}

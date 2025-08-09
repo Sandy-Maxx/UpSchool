@@ -1,0 +1,33 @@
+{
+  "saasAdmin": {
+    "id": "1",
+    "email": "saas-admin@upschool.com",
+    "name": "SaaS Administrator",
+    "role": "saas_admin",
+    "permissions": ["manage_tenants", "view_analytics", "manage_billing", "system_settings"]
+  },
+  "tenantAdmin": {
+    "id": "2",
+    "email": "admin@testschool.com",
+    "name": "School Administrator",
+    "role": "school_admin",
+    "tenantId": "1",
+    "permissions": ["manage_students", "manage_teachers", "view_reports", "school_settings"]
+  },
+  "teacher": {
+    "id": "3",
+    "email": "teacher@testschool.com",
+    "name": "Jane Teacher",
+    "role": "teacher",
+    "tenantId": "1",
+    "permissions": ["manage_grades", "view_students", "manage_attendance"]
+  },
+  "student": {
+    "id": "4",
+    "email": "student@testschool.com",
+    "name": "John Student",
+    "role": "student",
+    "tenantId": "1",
+    "permissions": ["view_grades", "view_schedule"]
+  }
+}

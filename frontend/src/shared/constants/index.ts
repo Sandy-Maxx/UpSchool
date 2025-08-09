@@ -1,352 +1,205 @@
-// ============================================================================
-// APPLICATION CONSTANTS
-// Centralized constants for both SaaS and Tenant portals
-// ============================================================================
-
-// Environment Configuration
-export const ENV = {
-  NODE_ENV: process.env.NODE_ENV || 'development',
-  API_URL: process.env.REACT_APP_API_URL || 'http://localhost:8000',
-  SAAS_API_URL: process.env.REACT_APP_SAAS_API_URL || 'http://localhost:8000/api/v1/public',
-  TENANT_API_URL: process.env.REACT_APP_TENANT_API_URL || 'http://localhost:8000/api/v1',
-  SAAS_DOMAIN: process.env.REACT_APP_SAAS_DOMAIN || 'localhost:3000',
-} as const;
-
 // API Configuration
 export const API_CONFIG = {
-  TIMEOUT: 30000, // 30 seconds
+  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
+  TIMEOUT: 10000,
   RETRY_ATTEMPTS: 3,
-  RETRY_DELAY: 1000, // 1 second
-  HEADERS: {
-    'Content-Type': 'application/json',
-    Accept: 'application/json',
-  },
+  RETRY_DELAY: 1000,
 } as const;
 
-// Authentication Configuration
+// Authentication
 export const AUTH_CONFIG = {
-  TOKEN_KEY: 'school_erp_token',
-  REFRESH_TOKEN_KEY: 'school_erp_refresh_token',
-  USER_KEY: 'school_erp_user',
-  SESSION_TIMEOUT: parseInt(process.env.REACT_APP_SESSION_TIMEOUT || '3600000'), // 1 hour
-  TOKEN_REFRESH_THRESHOLD: 5 * 60 * 1000, // 5 minutes before expiry
-  MAX_LOGIN_ATTEMPTS: 5,
-  LOCKOUT_DURATION: 15 * 60 * 1000, // 15 minutes
+  TOKEN_STORAGE_KEY: 'access_token',
+  REFRESH_TOKEN_STORAGE_KEY: 'refresh_token',
+  USER_STORAGE_KEY: 'user_data',
+  SESSION_TIMEOUT: 24 * 60 * 60 * 1000, // 24 hours
+  REFRESH_THRESHOLD: 5 * 60 * 1000, // 5 minutes before expiry
 } as const;
 
-// Portal Configuration
+// Portal Detection
 export const PORTAL_CONFIG = {
+  SAAS_DOMAINS: ['localhost', '127.0.0.1', 'upschool.com'],
+  TENANT_SUBDOMAIN_PATTERN: /^[a-z0-9-]+$/,
+  DEFAULT_PORTAL: 'saas',
+} as const;
+
+// Permissions
+export const PERMISSIONS = {
+  // SaaS Portal Permissions
   SAAS: {
-    NAME: 'UpClass',
-    DESCRIPTION: 'School Management System',
-    LOGO_URL: '/assets/logos/upclass-logo.png',
-    FAVICON_URL: '/assets/favicons/saas-favicon.ico',
+    PLATFORM_VIEW: 'platform.view',
+    PLATFORM_ADMIN: 'platform.admin',
+    TENANT_CREATE: 'tenant.create',
+    TENANT_VIEW: 'tenant.view',
+    TENANT_UPDATE: 'tenant.update',
+    TENANT_DELETE: 'tenant.delete',
+    SYSTEM_HEALTH: 'system.health',
+    ANALYTICS_VIEW: 'analytics.view',
   },
+  
+  // Tenant Portal Permissions
   TENANT: {
-    DEFAULT_LOGO_URL: '/assets/logos/default-school-logo.png',
-    DEFAULT_FAVICON_URL: '/assets/favicons/tenant-favicon.ico',
+    SCHOOL_ADMIN: 'school.admin',
+    USERS_VIEW: 'users.view',
+    USERS_CREATE: 'users.create',
+    USERS_UPDATE: 'users.update',
+    USERS_DELETE: 'users.delete',
+    STUDENTS_VIEW: 'students.view',
+    STUDENTS_CREATE: 'students.create',
+    STUDENTS_UPDATE: 'students.update',
+    TEACHERS_VIEW: 'teachers.view',
+    TEACHERS_CREATE: 'teachers.create',
+    ACADEMIC_VIEW: 'academic.view',
+    ACADEMIC_MANAGE: 'academic.manage',
+    LIBRARY_VIEW: 'library.view',
+    LIBRARY_MANAGE: 'library.manage',
+    TRANSPORT_VIEW: 'transport.view',
+    TRANSPORT_MANAGE: 'transport.manage',
+    REPORTS_VIEW: 'reports.view',
+    REPORTS_EXPORT: 'reports.export',
   },
 } as const;
 
-// User Roles and Permissions
+// User Roles
 export const USER_ROLES = {
-  SUPERADMIN: 'superadmin',
-  ADMIN: 'admin',
-  TEACHER: 'teacher',
-  STUDENT: 'student',
-  PARENT: 'parent',
-  STAFF: 'staff',
+  // SaaS Portal Roles
+  SAAS: {
+    SUPER_ADMIN: 'saas_super_admin',
+    PLATFORM_ADMIN: 'saas_platform_admin',
+    SUPPORT_AGENT: 'saas_support_agent',
+  },
+  
+  // Tenant Portal Roles
+  TENANT: {
+    SCHOOL_ADMIN: 'school_admin',
+    TEACHER: 'teacher',
+    STUDENT: 'student',
+    PARENT: 'parent',
+    STAFF: 'staff',
+  },
 } as const;
 
-export const PERMISSION_ACTIONS = {
-  VIEW: 'view',
-  CREATE: 'create',
-  UPDATE: 'update',
-  DELETE: 'delete',
-  APPROVE: 'approve',
-  REJECT: 'reject',
-  EXPORT: 'export',
-  IMPORT: 'import',
-  MANAGE: 'manage',
-} as const;
-
-export const PERMISSION_RESOURCES = {
-  // System-level resources (SaaS Portal)
-  TENANTS: 'tenants',
-  SYSTEM_USERS: 'system_users',
-  PLATFORM_ANALYTICS: 'platform_analytics',
-  BILLING: 'billing',
-  SYSTEM_SETTINGS: 'system_settings',
-
-  // School-level resources (Tenant Portal)
-  USERS: 'users',
-  STUDENTS: 'students',
-  TEACHERS: 'teachers',
-  PARENTS: 'parents',
-  STAFF: 'staff',
-  CLASSES: 'classes',
-  SUBJECTS: 'subjects',
-  GRADES: 'grades',
-  ATTENDANCE: 'attendance',
-  LIBRARY: 'library',
-  TRANSPORT: 'transport',
-  COMMUNICATION: 'communication',
-  REPORTS: 'reports',
-  SCHOOL_SETTINGS: 'school_settings',
-} as const;
-
-// UI Configuration
+// UI Constants
 export const UI_CONFIG = {
-  THEME: {
-    PRIMARY_COLOR: '#1976d2',
-    SECONDARY_COLOR: '#dc004e',
-    SUCCESS_COLOR: '#2e7d32',
-    ERROR_COLOR: '#d32f2f',
-    WARNING_COLOR: '#ed6c02',
-    INFO_COLOR: '#0288d1',
-  },
-  LAYOUT: {
-    SIDEBAR_WIDTH: 280,
-    HEADER_HEIGHT: 64,
-    FOOTER_HEIGHT: 40,
-  },
-  BREAKPOINTS: {
-    XS: 0,
-    SM: 600,
-    MD: 900,
-    LG: 1200,
-    XL: 1536,
-  },
-  ANIMATION: {
-    DURATION_SHORT: 150,
-    DURATION_STANDARD: 300,
-    DURATION_COMPLEX: 375,
-    EASING: {
-      EASE_IN_OUT: 'cubic-bezier(0.4, 0, 0.2, 1)',
-      EASE_OUT: 'cubic-bezier(0.0, 0, 0.2, 1)',
-      EASE_IN: 'cubic-bezier(0.4, 0, 1, 1)',
-    },
-  },
+  SIDEBAR_WIDTH: 280,
+  HEADER_HEIGHT: 64,
+  MOBILE_BREAKPOINT: 768,
+  NOTIFICATION_TIMEOUT: 5000,
+  DEBOUNCE_DELAY: 300,
+  ANIMATION_DURATION: 300,
 } as const;
 
-// Notification Configuration
-export const NOTIFICATION_CONFIG = {
-  DEFAULT_DURATION: 5000, // 5 seconds
-  SUCCESS_DURATION: 3000,
-  ERROR_DURATION: 8000,
-  WARNING_DURATION: 6000,
-  INFO_DURATION: 4000,
-  MAX_NOTIFICATIONS: 5,
-  POSITION: {
-    VERTICAL: 'top',
-    HORIZONTAL: 'right',
-  },
+// Theme Configuration
+export const THEME_CONFIG = {
+  DEFAULT_THEME: 'light',
+  STORAGE_KEY: 'theme_preference',
+  TRANSITION_DURATION: 200,
 } as const;
 
 // Form Validation
 export const VALIDATION_RULES = {
-  EMAIL: {
-    PATTERN: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-    MESSAGE: 'Please enter a valid email address',
-  },
-  PASSWORD: {
-    MIN_LENGTH: 8,
-    PATTERN: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
-    MESSAGE:
-      'Password must be at least 8 characters long and contain uppercase, lowercase, number, and special character',
-  },
-  PHONE: {
-    PATTERN: /^\+?[1-9]\d{1,14}$/,
-    MESSAGE: 'Please enter a valid phone number',
-  },
-  REQUIRED: {
-    MESSAGE: 'This field is required',
-  },
+  EMAIL_PATTERN: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+  PASSWORD_MIN_LENGTH: 8,
+  PASSWORD_PATTERN: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+  SUBDOMAIN_PATTERN: /^[a-z0-9][a-z0-9-]*[a-z0-9]$/,
+  SUBDOMAIN_MIN_LENGTH: 3,
+  SUBDOMAIN_MAX_LENGTH: 63,
 } as const;
 
-// File Upload Configuration
-export const FILE_CONFIG = {
-  MAX_SIZE: 10 * 1024 * 1024, // 10MB
-  ALLOWED_TYPES: {
-    IMAGES: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
-    DOCUMENTS: [
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    ],
-    SPREADSHEETS: [
-      'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    ],
-    VIDEOS: ['video/mp4', 'video/webm', 'video/ogg'],
-    AUDIO: ['audio/mp3', 'audio/wav', 'audio/ogg'],
+// Subscription Plans
+export const SUBSCRIPTION_PLANS = {
+  BASIC: {
+    id: 'basic',
+    name: 'Basic',
+    max_users: 50,
+    features: ['Student Management', 'Basic Reporting', 'Email Support'],
   },
-  UPLOAD_PATH: {
-    AVATARS: 'uploads/avatars',
-    DOCUMENTS: 'uploads/documents',
-    IMAGES: 'uploads/images',
-    VIDEOS: 'uploads/videos',
-    AUDIO: 'uploads/audio',
+  STANDARD: {
+    id: 'standard', 
+    name: 'Standard',
+    max_users: 200,
+    features: ['All Basic Features', 'Academic Management', 'Library System', 'Priority Support'],
   },
-} as const;
-
-// Pagination Configuration
-export const PAGINATION_CONFIG = {
-  DEFAULT_PAGE_SIZE: 20,
-  PAGE_SIZE_OPTIONS: [10, 20, 50, 100],
-  MAX_PAGE_SIZE: 100,
-} as const;
-
-// Chart Configuration
-export const CHART_CONFIG = {
-  COLORS: {
-    PRIMARY: ['#1976d2', '#42a5f5', '#64b5f6', '#90caf9', '#bbdefb'],
-    SECONDARY: ['#dc004e', '#f06292', '#f48fb1', '#f8bbd9', '#fce4ec'],
-    SUCCESS: ['#2e7d32', '#66bb6a', '#81c784', '#a5d6a7', '#c8e6c9'],
-    WARNING: ['#ed6c02', '#ffb74d', '#ffcc02', '#ffd54f', '#ffe082'],
-    ERROR: ['#d32f2f', '#e57373', '#ef5350', '#f44336', '#ffcdd2'],
+  PREMIUM: {
+    id: 'premium',
+    name: 'Premium', 
+    max_users: 500,
+    features: ['All Standard Features', 'Transport Management', 'Advanced Analytics', 'API Access'],
   },
-  DEFAULT_OPTIONS: {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'top' as const,
-      },
-      tooltip: {
-        mode: 'index',
-        intersect: false,
-      },
-    },
-    scales: {
-      x: {
-        display: true,
-        grid: {
-          display: false,
-        },
-      },
-      y: {
-        display: true,
-        beginAtZero: true,
-      },
-    },
+  ENTERPRISE: {
+    id: 'enterprise',
+    name: 'Enterprise',
+    max_users: 0, // Unlimited
+    features: ['All Premium Features', 'Custom Integrations', '24/7 Support', 'Dedicated Success Manager'],
   },
-} as const;
-
-// Date and Time Configuration
-export const DATE_CONFIG = {
-  FORMATS: {
-    DATE: 'YYYY-MM-DD',
-    TIME: 'HH:mm:ss',
-    DATETIME: 'YYYY-MM-DD HH:mm:ss',
-    DISPLAY_DATE: 'MMM DD, YYYY',
-    DISPLAY_DATETIME: 'MMM DD, YYYY HH:mm',
-  },
-  TIMEZONES: [
-    { value: 'UTC', label: 'UTC' },
-    { value: 'America/New_York', label: 'Eastern Time' },
-    { value: 'America/Chicago', label: 'Central Time' },
-    { value: 'America/Denver', label: 'Mountain Time' },
-    { value: 'America/Los_Angeles', label: 'Pacific Time' },
-    { value: 'Europe/London', label: 'London' },
-    { value: 'Europe/Paris', label: 'Paris' },
-    { value: 'Asia/Tokyo', label: 'Tokyo' },
-    { value: 'Asia/Shanghai', label: 'Shanghai' },
-    { value: 'Asia/Kolkata', label: 'India' },
-  ],
 } as const;
 
 // Error Messages
 export const ERROR_MESSAGES = {
-  NETWORK: 'Network error. Please check your internet connection.',
-  SERVER: 'Server error. Please try again later.',
+  NETWORK_ERROR: 'Network connection failed. Please check your internet connection.',
   UNAUTHORIZED: 'You are not authorized to perform this action.',
-  FORBIDDEN: 'Access denied. Please contact your administrator.',
+  FORBIDDEN: 'Access denied. You do not have permission to access this resource.',
   NOT_FOUND: 'The requested resource was not found.',
-  VALIDATION: 'Please check your input and try again.',
-  UNKNOWN: 'An unexpected error occurred. Please try again.',
+  SERVER_ERROR: 'An internal server error occurred. Please try again later.',
+  VALIDATION_ERROR: 'Please check your input and try again.',
+  SESSION_EXPIRED: 'Your session has expired. Please log in again.',
+  INVALID_CREDENTIALS: 'Invalid username or password.',
+  ACCOUNT_INACTIVE: 'Your account has been deactivated. Please contact support.',
+  RATE_LIMITED: 'Too many requests. Please wait a moment before trying again.',
 } as const;
 
 // Success Messages
 export const SUCCESS_MESSAGES = {
-  CREATED: 'Successfully created!',
-  UPDATED: 'Successfully updated!',
-  DELETED: 'Successfully deleted!',
-  SAVED: 'Successfully saved!',
-  SENT: 'Successfully sent!',
-  UPLOADED: 'Successfully uploaded!',
-  COPIED: 'Successfully copied to clipboard!',
+  LOGIN_SUCCESS: 'Successfully logged in!',
+  LOGOUT_SUCCESS: 'Successfully logged out!',
+  PROFILE_UPDATED: 'Profile updated successfully!',
+  PASSWORD_CHANGED: 'Password changed successfully!',
+  DATA_SAVED: 'Data saved successfully!',
+  DATA_DELETED: 'Data deleted successfully!',
+  EMAIL_SENT: 'Email sent successfully!',
+  INVITATION_SENT: 'Invitation sent successfully!',
 } as const;
 
-// Loading Messages
-export const LOADING_MESSAGES = {
-  DEFAULT: 'Loading...',
-  SAVING: 'Saving...',
-  UPLOADING: 'Uploading...',
-  PROCESSING: 'Processing...',
-  DELETING: 'Deleting...',
-  SENDING: 'Sending...',
+// Loading States
+export const LOADING_STATES = {
+  IDLE: 'idle',
+  LOADING: 'loading',
+  SUCCESS: 'success',
+  ERROR: 'error',
 } as const;
 
-// Route Paths
-export const ROUTES = {
-  // SaaS Portal Routes
-  SAAS: {
-    HOME: '/',
-    REGISTER: '/register',
-    LOGIN: '/login',
-    SUPERADMIN: '/superadmin',
-    TENANT_MANAGEMENT: '/superadmin/tenants',
-    PLATFORM_ANALYTICS: '/superadmin/analytics',
-    BILLING: '/superadmin/billing',
-    SETTINGS: '/superadmin/settings',
-  },
-
-  // Tenant Portal Routes
-  TENANT: {
-    DASHBOARD: '/dashboard',
-    PROFILE: '/profile',
-    SETTINGS: '/settings',
-
-    // Admin Routes
-    ADMIN: '/admin',
-    USER_MANAGEMENT: '/admin/users',
-    SCHOOL_SETTINGS: '/admin/settings',
-
-    // Academic Routes
-    STUDENTS: '/students',
-    TEACHERS: '/teachers',
-    CLASSES: '/classes',
-    SUBJECTS: '/subjects',
-    GRADES: '/grades',
-    ATTENDANCE: '/attendance',
-
-    // School Features
-    LIBRARY: '/library',
-    TRANSPORT: '/transport',
-    COMMUNICATION: '/communication',
-    REPORTS: '/reports',
-  },
+// Local Storage Keys
+export const STORAGE_KEYS = {
+  AUTH_TOKEN: 'auth_token',
+  REFRESH_TOKEN: 'refresh_token', 
+  USER_PREFERENCES: 'user_preferences',
+  THEME: 'theme',
+  SIDEBAR_STATE: 'sidebar_state',
+  RECENT_SEARCHES: 'recent_searches',
+  DASHBOARD_LAYOUT: 'dashboard_layout',
 } as const;
 
-// Export all constants as a single object for easy access
-export const CONSTANTS = {
-  ENV,
-  API_CONFIG,
-  AUTH_CONFIG,
-  PORTAL_CONFIG,
-  USER_ROLES,
-  PERMISSION_ACTIONS,
-  PERMISSION_RESOURCES,
-  UI_CONFIG,
-  NOTIFICATION_CONFIG,
-  VALIDATION_RULES,
-  FILE_CONFIG,
-  PAGINATION_CONFIG,
-  CHART_CONFIG,
-  DATE_CONFIG,
-  ERROR_MESSAGES,
-  SUCCESS_MESSAGES,
-  LOADING_MESSAGES,
-  ROUTES,
+// Date Formats
+export const DATE_FORMATS = {
+  DISPLAY: 'MMM dd, yyyy',
+  INPUT: 'yyyy-MM-dd',
+  DATETIME: 'MMM dd, yyyy h:mm a',
+  TIME: 'h:mm a',
+  ISO: 'yyyy-MM-ddTHH:mm:ss.SSSXXX',
+} as const;
+
+// File Upload
+export const UPLOAD_CONFIG = {
+  MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
+  ALLOWED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+  ALLOWED_DOCUMENT_TYPES: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+  CHUNK_SIZE: 1024 * 1024, // 1MB chunks for large files
+} as const;
+
+// Environment
+export const ENVIRONMENT = {
+  IS_DEVELOPMENT: import.meta.env.DEV,
+  IS_PRODUCTION: import.meta.env.PROD,
+  API_URL: import.meta.env.VITE_API_BASE_URL,
+  APP_NAME: import.meta.env.VITE_APP_NAME || 'UpSchool',
+  APP_VERSION: import.meta.env.VITE_APP_VERSION || '1.0.0',
 } as const;

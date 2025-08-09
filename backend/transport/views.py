@@ -15,8 +15,7 @@ from .models import (
 from .serializers import (
     VehicleSerializer, DriverSerializer, RouteSerializer, RouteStopSerializer,
     TransportAssignmentSerializer, StudentTransportSerializer, TransportTrackingSerializer,
-    TransportIncidentSerializer, TransportSettingsSerializer, RouteCreateSerializer,
-    StudentTransportCreateSerializer
+    TransportIncidentSerializer, TransportSettingsSerializer
 )
 from core.permissions import IsTenantUser
 
@@ -28,23 +27,25 @@ class VehicleViewSet(viewsets.ModelViewSet):
     serializer_class = VehicleSerializer
     permission_classes = [IsTenantUser]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['status', 'fuel_type', 'driver']
-    search_fields = ['registration_number', 'model', 'make']
-    ordering_fields = ['registration_number', 'year', 'created_at']
+    filterset_fields = ['status', 'fuel_type', 'vehicle_type']
+    search_fields = ['registration_number', 'vehicle_number', 'model', 'make']
+    ordering_fields = ['registration_number', 'vehicle_number', 'year', 'created_at']
     ordering = ['registration_number']
 
     def get_queryset(self):
-        """Filter vehicles by tenant."""
+        """Filter vehicles by tenant. Avoid DB access during schema generation."""
+        if getattr(self, 'swagger_fake_view', False):
+            return Vehicle.objects.none()
         user = self.request.user
-        if user.is_superuser:
+        if getattr(user, 'is_superuser', False):
             return Vehicle.objects.all()
-        return Vehicle.objects.filter(school__tenant=user.tenant)
+        return Vehicle.objects.filter(school__tenant=getattr(user, 'tenant', None))
 
     @action(detail=False, methods=['get'])
-    def available(self, request):
-        """Get available vehicles."""
-        available_vehicles = self.get_queryset().filter(status='available')
-        serializer = self.get_serializer(available_vehicles, many=True)
+    def active(self, request):
+        """Get active vehicles."""
+        active_vehicles = self.get_queryset().filter(status='active')
+        serializer = self.get_serializer(active_vehicles, many=True)
         return Response(serializer.data)
 
     @action(detail=False, methods=['get'])
@@ -81,16 +82,18 @@ class DriverViewSet(viewsets.ModelViewSet):
     permission_classes = [IsTenantUser]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['status', 'license_type']
-    search_fields = ['first_name', 'last_name', 'license_number', 'email']
-    ordering_fields = ['first_name', 'last_name', 'experience_years']
-    ordering = ['first_name', 'last_name']
+    search_fields = ['driver_id', 'license_number', 'user__first_name', 'user__last_name', 'user__email']
+    ordering_fields = ['driver_id', 'experience_years', 'created_at']
+    ordering = ['driver_id']
 
     def get_queryset(self):
-        """Filter drivers by tenant."""
+        """Filter drivers by tenant. Avoid DB access during schema generation."""
+        if getattr(self, 'swagger_fake_view', False):
+            return Driver.objects.none()
         user = self.request.user
-        if user.is_superuser:
+        if getattr(user, 'is_superuser', False):
             return Driver.objects.all()
-        return Driver.objects.filter(school__tenant=user.tenant)
+        return Driver.objects.filter(school__tenant=getattr(user, 'tenant', None))
 
     @action(detail=False, methods=['get'])
     def available(self, request):
@@ -134,16 +137,18 @@ class RouteStopViewSet(viewsets.ModelViewSet):
     permission_classes = [IsTenantUser]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['route']
-    search_fields = ['name', 'address']
-    ordering_fields = ['stop_order', 'name']
-    ordering = ['stop_order']
+    search_fields = ['stop_name', 'stop_address']
+    ordering_fields = ['sequence_order', 'stop_name']
+    ordering = ['sequence_order']
 
     def get_queryset(self):
-        """Filter route stops by tenant."""
+        """Filter route stops by tenant. Avoid DB access during schema generation."""
+        if getattr(self, 'swagger_fake_view', False):
+            return RouteStop.objects.none()
         user = self.request.user
-        if user.is_superuser:
+        if getattr(user, 'is_superuser', False):
             return RouteStop.objects.all()
-        return RouteStop.objects.filter(route__school__tenant=user.tenant)
+        return RouteStop.objects.filter(route__school__tenant=getattr(user, 'tenant', None))
 
 
 class RouteViewSet(viewsets.ModelViewSet):
@@ -153,22 +158,22 @@ class RouteViewSet(viewsets.ModelViewSet):
     serializer_class = RouteSerializer
     permission_classes = [IsTenantUser]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['status', 'vehicle', 'driver']
-    search_fields = ['name', 'description', 'start_location', 'end_location']
-    ordering_fields = ['name', 'distance_km', 'created_at']
-    ordering = ['name']
+    filterset_fields = ['status']
+    search_fields = ['route_number', 'route_name', 'description', 'start_location', 'end_location']
+    ordering_fields = ['route_number', 'route_name', 'distance_km', 'created_at']
+    ordering = ['route_number']
 
     def get_queryset(self):
-        """Filter routes by tenant."""
+        """Filter routes by tenant. Avoid DB access during schema generation."""
+        if getattr(self, 'swagger_fake_view', False):
+            return Route.objects.none()
         user = self.request.user
-        if user.is_superuser:
+        if getattr(user, 'is_superuser', False):
             return Route.objects.all()
-        return Route.objects.filter(school__tenant=user.tenant)
+        return Route.objects.filter(school__tenant=getattr(user, 'tenant', None))
 
     def get_serializer_class(self):
         """Use different serializer for creation."""
-        if self.action == 'create':
-            return RouteCreateSerializer
         return RouteSerializer
 
     @action(detail=False, methods=['get'])
@@ -196,7 +201,6 @@ class RouteViewSet(viewsets.ModelViewSet):
             'active_routes': queryset.filter(status='active').count(),
             'inactive_routes': queryset.filter(status='inactive').count(),
             'average_distance': queryset.aggregate(avg=Avg('distance_km'))['avg'] or 0,
-            'total_distance': queryset.aggregate(total=Avg('distance_km'))['total'] or 0,
         }
         
         return Response(stats)
@@ -263,9 +267,7 @@ class StudentTransportViewSet(viewsets.ModelViewSet):
         return StudentTransport.objects.filter(school__tenant=user.tenant)
 
     def get_serializer_class(self):
-        """Use different serializer for creation."""
-        if self.action == 'create':
-            return StudentTransportCreateSerializer
+        """Return the default serializer class."""
         return StudentTransportSerializer
 
     @action(detail=False, methods=['get'])

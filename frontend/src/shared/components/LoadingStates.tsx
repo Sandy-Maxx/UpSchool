@@ -1,261 +1,468 @@
-// ============================================================================
-// LOADING STATE COMPONENTS
-// Reusable loading components for different UI patterns
-// ============================================================================
-
 import React from 'react';
 import {
   Box,
-  Typography,
   CircularProgress,
-  LinearProgress,
   Skeleton,
-  Stack,
-  Paper,
+  Typography,
+  LinearProgress,
   Card,
   CardContent,
-  Grid,
+  Stack,
+  useTheme,
 } from '@mui/material';
-import { styled, keyframes } from '@mui/material/styles';
+import { motion } from 'framer-motion';
 
-// ============================================================================
-// STYLED COMPONENTS
-// ============================================================================
-
-const pulse = keyframes`
-  0% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.4;
-  }
-  100% {
-    opacity: 1;
-  }
-`;
-
-const PulseBox = styled(Box)(({ theme }) => ({
-  animation: `${pulse} 2s ease-in-out infinite`,
-}));
-
-// ============================================================================
-// BASIC LOADING COMPONENTS
-// ============================================================================
-
-interface LoadingSpinnerProps {
-  size?: number | string;
-  message?: string;
+// Loading Spinner Component
+export const LoadingSpinner: React.FC<{
+  size?: number;
   color?: 'primary' | 'secondary' | 'inherit';
-  variant?: 'determinate' | 'indeterminate';
-  value?: number;
-}
-
-export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
-  size = 40,
-  message,
-  color = 'primary',
-  variant = 'indeterminate',
-  value,
-}) => (
+  message?: string;
+}> = ({ size = 40, color = 'primary', message }) => (
   <Box
-    display="flex"
-    flexDirection="column"
-    alignItems="center"
-    justifyContent="center"
-    gap={2}
-    py={4}
+    sx={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 2,
+      py: 3,
+    }}
   >
-    <CircularProgress size={size} color={color} variant={variant} value={value} />
+    <CircularProgress size={size} color={color} />
     {message && (
-      <Typography variant="body2" color="text.secondary" textAlign="center">
+      <Typography variant="body2" color="text.secondary">
         {message}
       </Typography>
     )}
   </Box>
 );
 
-interface LoadingBarProps {
+// Full Page Loading Component
+export const FullPageLoader: React.FC<{
   message?: string;
-  variant?: 'determinate' | 'indeterminate';
-  value?: number;
-  color?: 'primary' | 'secondary' | 'inherit';
-}
+  progress?: number;
+}> = ({ message = 'Loading...', progress }) => {
+  const theme = useTheme();
 
-export const LoadingBar: React.FC<LoadingBarProps> = ({
-  message,
-  variant = 'indeterminate',
-  value,
-  color = 'primary',
-}) => (
-  <Box width="100%" py={2}>
-    {message && (
-      <Typography variant="body2" color="text.secondary" gutterBottom>
-        {message}
-      </Typography>
-    )}
-    <LinearProgress
-      variant={variant}
-      value={value}
-      color={color}
-      sx={{ borderRadius: 1, height: 6 }}
-    />
-  </Box>
+  return (
+    <Box
+      sx={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: theme.palette.background.default,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999,
+        gap: 3,
+      }}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3 }}
+      >
+        <CircularProgress size={60} />
+      </motion.div>
+      
+      <Box sx={{ textAlign: 'center', maxWidth: 400 }}>
+        <Typography variant="h6" gutterBottom>
+          {message}
+        </Typography>
+        
+        {progress !== undefined && (
+          <Box sx={{ width: '100%', mt: 2 }}>
+            <LinearProgress 
+              variant="determinate" 
+              value={progress} 
+              sx={{ height: 6, borderRadius: 3 }}
+            />
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              {Math.round(progress)}% complete
+            </Typography>
+          </Box>
+        )}
+      </Box>
+    </Box>
+  );
+};
+
+// Card Loading Skeleton
+export const CardSkeleton: React.FC<{
+  count?: number;
+  height?: number;
+  showAvatar?: boolean;
+}> = ({ count = 1, height = 200, showAvatar = false }) => (
+  <>
+    {Array.from({ length: count }).map((_, index) => (
+      <Card key={index} sx={{ mb: 2 }}>
+        <CardContent>
+          <Stack spacing={2}>
+            {showAvatar && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Skeleton variant="circular" width={40} height={40} />
+                <Box sx={{ flex: 1 }}>
+                  <Skeleton variant="text" width="40%" />
+                  <Skeleton variant="text" width="60%" />
+                </Box>
+              </Box>
+            )}
+            
+            <Skeleton variant="rectangular" height={height} />
+            
+            <Box>
+              <Skeleton variant="text" width="80%" />
+              <Skeleton variant="text" width="60%" />
+              <Skeleton variant="text" width="40%" />
+            </Box>
+          </Stack>
+        </CardContent>
+      </Card>
+    ))}
+  </>
 );
 
-// ============================================================================
-// SKELETON LOADERS
-// ============================================================================
-
-export const TableSkeleton: React.FC<{ rows?: number; columns?: number }> = ({
-  rows = 5,
-  columns = 4,
-}) => (
+// Table Loading Skeleton
+export const TableSkeleton: React.FC<{
+  rows?: number;
+  columns?: number;
+}> = ({ rows = 5, columns = 4 }) => (
   <Box>
-    {Array.from({ length: rows }).map((_, index) => (
-      <Box key={index} display="flex" gap={2} mb={2} alignItems="center">
+    {/* Header */}
+    <Box sx={{ display: 'flex', gap: 2, mb: 2, p: 2 }}>
+      {Array.from({ length: columns }).map((_, index) => (
+        <Skeleton key={index} variant="text" width="25%" height={24} />
+      ))}
+    </Box>
+    
+    {/* Rows */}
+    {Array.from({ length: rows }).map((_, rowIndex) => (
+      <Box key={rowIndex} sx={{ display: 'flex', gap: 2, mb: 1, p: 2 }}>
         {Array.from({ length: columns }).map((_, colIndex) => (
-          <Skeleton key={colIndex} variant="text" width={colIndex === 0 ? 200 : 150} height={40} />
+          <Skeleton key={colIndex} variant="text" width="25%" height={20} />
         ))}
       </Box>
     ))}
   </Box>
 );
 
-export const CardSkeleton: React.FC<{ height?: number; showActions?: boolean }> = ({
-  height = 200,
-  showActions = true,
-}) => (
-  <Card>
-    <Skeleton variant="rectangular" height={height * 0.6} />
-    <CardContent>
-      <Skeleton variant="text" height={30} />
-      <Skeleton variant="text" height={20} width="60%" />
-      {showActions && (
-        <Box display="flex" gap={1} mt={2}>
-          <Skeleton variant="rectangular" width={80} height={32} />
-          <Skeleton variant="rectangular" width={80} height={32} />
+// List Loading Skeleton
+export const ListSkeleton: React.FC<{
+  count?: number;
+  showAvatar?: boolean;
+  showActions?: boolean;
+}> = ({ count = 5, showAvatar = true, showActions = false }) => (
+  <Stack spacing={1}>
+    {Array.from({ length: count }).map((_, index) => (
+      <Box
+        key={index}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+          p: 2,
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: 1,
+        }}
+      >
+        {showAvatar && (
+          <Skeleton variant="circular" width={40} height={40} />
+        )}
+        
+        <Box sx={{ flex: 1 }}>
+          <Skeleton variant="text" width="60%" height={20} />
+          <Skeleton variant="text" width="40%" height={16} />
         </Box>
-      )}
-    </CardContent>
-  </Card>
-);
-
-export const ListSkeleton: React.FC<{ items?: number; showAvatar?: boolean }> = ({
-  items = 5,
-  showAvatar = true,
-}) => (
-  <Stack spacing={2}>
-    {Array.from({ length: items }).map((_, index) => (
-      <Box key={index} display="flex" alignItems="center" gap={2}>
-        {showAvatar && <Skeleton variant="circular" width={40} height={40} />}
-        <Box flex={1}>
-          <Skeleton variant="text" height={24} width="70%" />
-          <Skeleton variant="text" height={20} width="50%" />
-        </Box>
+        
+        {showActions && (
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Skeleton variant="rectangular" width={60} height={32} />
+            <Skeleton variant="rectangular" width={60} height={32} />
+          </Box>
+        )}
       </Box>
     ))}
   </Stack>
 );
 
-// ============================================================================
-// DASHBOARD SKELETONS
-// ============================================================================
-
+// Dashboard Loading Skeleton
 export const DashboardSkeleton: React.FC = () => (
-  <Box>
+  <Box sx={{ p: 3 }}>
     {/* Header */}
-    <Box mb={4}>
-      <Skeleton variant="text" height={40} width="30%" />
-      <Skeleton variant="text" height={24} width="50%" />
+    <Box sx={{ mb: 4 }}>
+      <Skeleton variant="text" width="30%" height={32} sx={{ mb: 1 }} />
+      <Skeleton variant="text" width="50%" height={20} />
     </Box>
-
+    
     {/* Stats Cards */}
-    <Grid container spacing={3} mb={4}>
+    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 3, mb: 4 }}>
       {Array.from({ length: 4 }).map((_, index) => (
-        <Grid item xs={12} sm={6} md={3} key={index}>
-          <Paper elevation={2} sx={{ p: 3 }}>
-            <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-              <Skeleton variant="circular" width={40} height={40} />
-              <Skeleton variant="text" width={60} height={24} />
+        <Card key={index}>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Skeleton variant="circular" width={48} height={48} />
+              <Box sx={{ flex: 1 }}>
+                <Skeleton variant="text" width="80%" height={24} />
+                <Skeleton variant="text" width="60%" height={20} />
+              </Box>
             </Box>
-            <Skeleton variant="text" height={32} />
-            <Skeleton variant="text" height={20} width="60%" />
-          </Paper>
-        </Grid>
+          </CardContent>
+        </Card>
       ))}
-    </Grid>
-
-    {/* Chart Skeleton */}
-    <Paper elevation={2} sx={{ p: 3, mb: 4 }}>
-      <Skeleton variant="text" height={32} width="25%" sx={{ mb: 2 }} />
-      <Skeleton variant="rectangular" height={300} />
-    </Paper>
-
-    {/* Table Skeleton */}
-    <Paper elevation={2} sx={{ p: 3 }}>
-      <Skeleton variant="text" height={32} width="25%" sx={{ mb: 2 }} />
-      <TableSkeleton />
-    </Paper>
+    </Box>
+    
+    {/* Chart and Table */}
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+      <Card>
+        <CardContent>
+          <Skeleton variant="text" width="40%" height={24} sx={{ mb: 2 }} />
+          <Skeleton variant="rectangular" height={300} />
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardContent>
+          <Skeleton variant="text" width="40%" height={24} sx={{ mb: 2 }} />
+          <TableSkeleton rows={6} columns={3} />
+        </CardContent>
+      </Card>
+    </Box>
   </Box>
 );
 
-// ============================================================================
-// PAGE LOADING STATES
-// ============================================================================
-
-interface PageLoadingProps {
+// Inline Loader (for buttons, etc.)
+export const InlineLoader: React.FC<{
+  size?: number;
   message?: string;
-  fullScreen?: boolean;
-}
-
-export const PageLoading: React.FC<PageLoadingProps> = ({
-  message = 'Loading...',
-  fullScreen = false,
-}) => {
-  const content = (
-    <Box
-      display="flex"
-      flexDirection="column"
-      alignItems="center"
-      justifyContent="center"
-      minHeight={fullScreen ? '100vh' : 400}
-      gap={3}
-    >
-      <Box position="relative">
-        <CircularProgress size={60} thickness={4} />
-        <Box
-          position="absolute"
-          top={0}
-          left={0}
-          bottom={0}
-          right={0}
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-        >
-          <PulseBox>
-            <Typography variant="h6" component="div" color="primary">
-              UpClass
-            </Typography>
-          </PulseBox>
-        </Box>
-      </Box>
-      <Typography variant="h6" color="text.primary">
+}> = ({ size = 16, message }) => (
+  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+    <CircularProgress size={size} />
+    {message && (
+      <Typography variant="caption" color="text.secondary">
         {message}
       </Typography>
+    )}
+  </Box>
+);
+
+// Progressive Loading Component
+export const ProgressiveLoader: React.FC<{
+  steps: string[];
+  currentStep: number;
+  completed?: boolean;
+}> = ({ steps, currentStep, completed = false }) => {
+  const theme = useTheme();
+
+  return (
+    <Box sx={{ maxWidth: 400, mx: 'auto', textAlign: 'center' }}>
+      <Box sx={{ mb: 3 }}>
+        {completed ? (
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Box
+              sx={{
+                width: 60,
+                height: 60,
+                borderRadius: '50%',
+                backgroundColor: theme.palette.success.main,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mx: 'auto',
+                color: 'white',
+                fontSize: 24,
+              }}
+            >
+              ✓
+            </Box>
+          </motion.div>
+        ) : (
+          <CircularProgress size={60} />
+        )}
+      </Box>
+
+      <Typography variant="h6" gutterBottom>
+        {completed ? 'Complete!' : steps[currentStep]}
+      </Typography>
+
+      <Box sx={{ mt: 3 }}>
+        <LinearProgress
+          variant="determinate"
+          value={completed ? 100 : ((currentStep + 1) / steps.length) * 100}
+          sx={{ height: 6, borderRadius: 3 }}
+        />
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          Step {Math.min(currentStep + 1, steps.length)} of {steps.length}
+        </Typography>
+      </Box>
     </Box>
   );
+};
 
-  if (fullScreen) {
+// Unified LoadingStates component for testing compatibility
+export interface LoadingStatesProps {
+  show?: boolean;
+  text?: string;
+  size?: 'small' | 'medium' | 'large';
+  variant?: 'spinner' | 'skeleton' | 'dots' | 'pulse';
+  fullscreen?: boolean;
+  progress?: number;
+  className?: string;
+  delay?: number;
+}
+
+export const LoadingStates: React.FC<LoadingStatesProps> = ({
+  show = true,
+  text = 'Loading...',
+  size = 'medium',
+  variant = 'spinner',
+  fullscreen = false,
+  progress,
+  className,
+  delay = 0,
+}) => {
+  const [shouldShow, setShouldShow] = React.useState(delay === 0);
+
+  React.useEffect(() => {
+    if (delay > 0 && show) {
+      const timer = setTimeout(() => {
+        setShouldShow(true);
+      }, delay);
+      return () => clearTimeout(timer);
+    }
+  }, [delay, show]);
+
+  if (!show || !shouldShow) {
+    return null;
+  }
+
+  const sizeMap = {
+    small: 20,
+    medium: 40,
+    large: 60,
+  };
+
+  const getContent = () => {
+    switch (variant) {
+      case 'skeleton':
+        return (
+          <Box data-testid="skeleton-loader">
+            <Skeleton variant="rectangular" width="100%" height={60} />
+            <Skeleton variant="text" width="80%" />
+            <Skeleton variant="text" width="60%" />
+          </Box>
+        );
+
+      case 'dots':
+        return (
+          <Box
+            data-testid="dots-loader"
+            display="flex"
+            flexDirection="column"
+            alignItems="center"
+            gap={2}
+          >
+            <Box display="flex" gap={1}>
+              {[0, 1, 2].map((i) => (
+                <Box
+                  key={i}
+                  sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    backgroundColor: 'currentColor',
+                    animation: 'pulse 1.4s ease-in-out infinite',
+                    animationDelay: `${i * 0.16}s`,
+                  }}
+                />
+              ))}
+            </Box>
+            <Typography variant="body2" color="text.secondary">
+              {text}
+            </Typography>
+          </Box>
+        );
+
+      case 'pulse':
+        return (
+          <Box
+            data-testid="pulse-loader"
+            display="flex"
+            flexDirection="column"
+            alignItems="center"
+            gap={2}
+          >
+            <Box
+              sx={{
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                backgroundColor: 'currentColor',
+                animation: 'pulse 1.5s ease-in-out infinite',
+              }}
+            />
+            <Typography variant="body2" color="text.secondary">
+              {text}
+            </Typography>
+          </Box>
+        );
+
+      case 'spinner':
+      default:
+        return (
+          <Box
+            data-testid="loading-spinner"
+            display="flex"
+            flexDirection="column"
+            alignItems="center"
+            gap={2}
+            className={className}
+            role="status"
+            aria-label="Loading"
+          >
+            <CircularProgress size={sizeMap[size]} />
+            <Typography variant="body2" color="text.secondary">
+              {text}
+            </Typography>
+            {progress !== undefined && (
+              <Box width="100%" maxWidth={200}>
+                <LinearProgress variant="determinate" value={progress} sx={{ mb: 1 }} />
+                <Typography variant="caption" color="text.secondary">
+                  {progress}%
+                </Typography>
+              </Box>
+            )}
+          </Box>
+        );
+    }
+  };
+
+  const content = getContent();
+
+  if (fullscreen) {
     return (
       <Box
-        position="fixed"
-        top={0}
-        left={0}
-        right={0}
-        bottom={0}
-        bgcolor="background.default"
-        zIndex={9999}
+        data-testid="loading-overlay"
+        sx={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(255, 255, 255, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+        }}
       >
         {content}
       </Box>
@@ -265,150 +472,8 @@ export const PageLoading: React.FC<PageLoadingProps> = ({
   return content;
 };
 
-export const InlineLoading: React.FC<{ message?: string; size?: 'small' | 'medium' | 'large' }> = ({
-  message,
-  size = 'medium',
-}) => {
-  const spinnerSize = size === 'small' ? 16 : size === 'large' ? 32 : 24;
-
-  return (
-    <Box display="inline-flex" alignItems="center" gap={1}>
-      <CircularProgress size={spinnerSize} />
-      {message && (
-        <Typography variant="body2" color="text.secondary">
-          {message}
-        </Typography>
-      )}
-    </Box>
-  );
-};
-
-// ============================================================================
-// FORM LOADING STATES
-// ============================================================================
-
-export const FormSkeleton: React.FC<{ fields?: number }> = ({ fields = 5 }) => (
-  <Stack spacing={3}>
-    {Array.from({ length: fields }).map((_, index) => (
-      <Box key={index}>
-        <Skeleton variant="text" height={24} width="30%" sx={{ mb: 1 }} />
-        <Skeleton variant="rectangular" height={56} />
-      </Box>
-    ))}
-    <Box display="flex" gap={2} mt={3}>
-      <Skeleton variant="rectangular" width={100} height={40} />
-      <Skeleton variant="rectangular" width={80} height={40} />
-    </Box>
-  </Stack>
-);
-
-// ============================================================================
-// CONTENT LOADING PATTERNS
-// ============================================================================
-
-interface ContentLoadingProps {
-  type: 'table' | 'cards' | 'list' | 'dashboard' | 'form' | 'chart';
-  count?: number;
-  height?: number;
-}
-
-export const ContentLoading: React.FC<ContentLoadingProps> = ({
-  type,
-  count = 5,
-  height = 200,
-}) => {
-  switch (type) {
-    case 'table':
-      return <TableSkeleton rows={count} />;
-
-    case 'cards':
-      return (
-        <Grid container spacing={3}>
-          {Array.from({ length: count }).map((_, index) => (
-            <Grid item xs={12} sm={6} md={4} key={index}>
-              <CardSkeleton height={height} />
-            </Grid>
-          ))}
-        </Grid>
-      );
-
-    case 'list':
-      return <ListSkeleton items={count} />;
-
-    case 'dashboard':
-      return <DashboardSkeleton />;
-
-    case 'form':
-      return <FormSkeleton fields={count} />;
-
-    case 'chart':
-      return (
-        <Paper elevation={2} sx={{ p: 3 }}>
-          <Skeleton variant="text" height={32} width="25%" sx={{ mb: 2 }} />
-          <Skeleton variant="rectangular" height={height} />
-        </Paper>
-      );
-
-    default:
-      return <LoadingSpinner message="Loading content..." />;
-  }
-};
-
-// ============================================================================
-// LAZY LOADING WRAPPER
-// ============================================================================
-
-interface LazyLoadingProps {
-  loading: boolean;
-  error?: string | null;
-  loadingComponent?: React.ReactNode;
-  errorComponent?: React.ReactNode;
-  children: React.ReactNode;
-}
-
-export const LazyLoadingWrapper: React.FC<LazyLoadingProps> = ({
-  loading,
-  error,
-  loadingComponent,
-  errorComponent,
-  children,
-}) => {
-  if (loading) {
-    return <>{loadingComponent || <LoadingSpinner message="Loading..." />}</>;
-  }
-
-  if (error) {
-    return (
-      <>
-        {errorComponent || (
-          <Box textAlign="center" py={4}>
-            <Typography color="error" variant="h6" gutterBottom>
-              Error Loading Content
-            </Typography>
-            <Typography color="text.secondary">{error}</Typography>
-          </Box>
-        )}
-      </>
-    );
-  }
-
-  return <>{children}</>;
-};
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
-export default {
-  LoadingSpinner,
-  LoadingBar,
-  TableSkeleton,
-  CardSkeleton,
-  ListSkeleton,
-  DashboardSkeleton,
-  PageLoading,
-  InlineLoading,
-  FormSkeleton,
-  ContentLoading,
-  LazyLoadingWrapper,
+// Export all loading components
+export {
+  LoadingSpinner as Loader,
+  FullPageLoader as PageLoader,
 };

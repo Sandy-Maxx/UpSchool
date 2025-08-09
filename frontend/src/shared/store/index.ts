@@ -1,67 +1,59 @@
-import { configureStore } from '@reduxjs/toolkit';
-import { setupListeners } from '@reduxjs/toolkit/query';
-import { persistStore, persistReducer } from 'redux-persist';
+import { configureStore, combineReducers } from '@reduxjs/toolkit';
+import {
+  persistStore,
+  persistReducer,
+  FLUSH,
+  REHYDRATE,
+  PAUSE,
+  PERSIST,
+  PURGE,
+  REGISTER,
+} from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
-import { FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER } from 'redux-persist';
-
-// Import reducers
-import authReducer from './slices/authSlice';
-import uiReducer from './slices/uiSlice';
-import notificationReducer from './slices/notificationSlice';
-import { apiSlice } from './slices/apiSlice';
+import { authSlice } from './slices/authSlice';
+import { uiSlice } from './slices/uiSlice';
+import { notificationSlice } from './slices/notificationSlice';
 import { sessionMiddleware } from './middleware/sessionMiddleware';
 
-// Import root reducer
-import rootReducer from './rootReducer';
+// Root reducer configuration
+const rootReducer = combineReducers({
+  auth: authSlice.reducer,
+  ui: uiSlice.reducer,
+  notifications: notificationSlice.reducer,
+});
 
 // Persist configuration
 const persistConfig = {
-  key: 'erp-root',
-  version: 1,
+  key: 'root',
   storage,
-  // Only persist authentication and critical user data
-  whitelist: ['auth'],
-  // Don't persist UI state and notifications
-  blacklist: ['ui', 'notification', 'api'],
+  // Only persist certain slices
+  whitelist: ['auth', 'ui'],
+  // Don't persist sensitive data or temporary state
+  blacklist: ['notifications'],
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 
-// Configure store with enhanced middleware
+// Store configuration
 export const store = configureStore({
   reducer: persistedReducer,
-  middleware: getDefaultMiddleware =>
+  middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {
         ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
       },
-      // Enable additional checks in development
-      immutableCheck: process.env.NODE_ENV === 'development',
-    })
-      // Add RTK Query middleware and session middleware
-      .concat(apiSlice.middleware)
-      .prepend(sessionMiddleware.middleware),
-
-  // Enable Redux DevTools in development
-  devTools: process.env.NODE_ENV !== 'production' && {
-    name: 'Multi-Tenant School ERP',
-    trace: true,
-    traceLimit: 25,
-  },
+    }).concat(sessionMiddleware),
+  devTools: import.meta.env.DEV,
 });
 
-// Setup listeners for refetchOnFocus/refetchOnReconnect behavior
-setupListeners(store.dispatch);
-
-// Create persistor
 export const persistor = persistStore(store);
 
-// Export types
-export type RootState = ReturnType<typeof store.getState>;
+// Type definitions  
 export type AppDispatch = typeof store.dispatch;
+export type RootState = ReturnType<typeof rootReducer>;
 
-// Export actions for easy access
-export * from './slices/authSlice';
-export * from './slices/uiSlice';
-export * from './slices/notificationSlice';
-export { apiSlice };
+// Utility function to reset store
+export const resetStore = () => {
+  store.dispatch({ type: 'RESET_STORE' });
+  persistor.purge();
+};

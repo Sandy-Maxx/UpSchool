@@ -1,242 +1,151 @@
-// ============================================================================
-// SHARED TYPE DEFINITIONS
-// Core types used across both SaaS and Tenant portals
-// ============================================================================
-
-// Base Entity Types
+// Base Entity Interface
 export interface BaseEntity {
   id: string;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
 }
 
-// Portal Context Types
-export type PortalType = 'saas' | 'tenant';
-
-export interface PortalContext {
-  type: PortalType;
-  subdomain?: string;
-  tenantId?: string;
-}
-
-// User Types (Shared across portals)
-export type UserRole = 'superadmin' | 'admin' | 'teacher' | 'student' | 'parent' | 'staff';
-
+// User Types
 export interface User extends BaseEntity {
+  username: string;
   email: string;
-  firstName: string;
-  lastName: string;
-  role: UserRole;
-  isActive: boolean;
-  lastLogin?: string;
-  avatar?: string;
-  phone?: string;
+  first_name: string;
+  last_name: string;
+  is_active: boolean;
+  is_staff: boolean;
+  is_superuser: boolean;
+  last_login?: string;
+  job_title?: string;
+  profile_image?: string;
 }
 
 // Permission Types
-export type PermissionAction =
-  | 'view'
-  | 'create'
-  | 'update'
-  | 'delete'
-  | 'approve'
-  | 'reject'
-  | 'export'
-  | 'import'
-  | 'manage';
-
 export interface Permission {
-  resource: string;
-  action: PermissionAction;
-  conditions?: Record<string, unknown>;
+  id: string;
+  name: string;
+  codename: string;
+  content_type: string;
 }
 
-export interface Role extends BaseEntity {
+export interface Role {
+  id: string;
   name: string;
-  description: string;
   permissions: Permission[];
-  level: 'system' | 'tenant' | 'school';
+}
+
+export interface UserRole extends BaseEntity {
+  user_id: string;
+  role_id: string;
+  tenant_id?: string;
 }
 
 // Tenant Types
-export type TenantStatus = 'trial' | 'active' | 'suspended' | 'inactive';
-
 export interface Tenant extends BaseEntity {
   name: string;
   subdomain: string;
-  status: TenantStatus;
-  trialEndsAt?: string;
-  settings: TenantSettings;
-  subscription?: Subscription;
-}
-
-export interface TenantSettings {
-  timezone: string;
-  locale: string;
-  dateFormat: string;
-  currency: string;
-  academicYearStart: string;
-  logoUrl?: string;
-  primaryColor?: string;
-  secondaryColor?: string;
-}
-
-// Subscription Types
-export type PlanType = 'basic' | 'standard' | 'premium' | 'enterprise';
-
-export interface Subscription extends BaseEntity {
-  tenantId: string;
-  plan: PlanType;
-  status: 'active' | 'past_due' | 'canceled' | 'unpaid';
-  currentPeriodStart: string;
-  currentPeriodEnd: string;
-  cancelAtPeriodEnd: boolean;
-  trialEnd?: string;
+  database_name: string;
+  is_active: boolean;
+  subscription_status: 'trial' | 'active' | 'suspended' | 'cancelled';
+  subscription_plan: 'basic' | 'standard' | 'premium' | 'enterprise';
+  max_users: number;
+  admin_name: string;
+  admin_email: string;
+  phone_number?: string;
+  address?: string;
+  academic_year_start?: string;
+  first_login_at?: string;
+  last_activity_at?: string;
 }
 
 // API Response Types
-export interface ApiResponse<T = unknown> {
-  success: boolean;
-  data?: T;
-  error?: ApiError;
+export interface ApiResponse<T = any> {
+  data: T;
   message?: string;
+  status: number;
 }
 
 export interface ApiError {
-  code: string;
   message: string;
-  details?: Record<string, unknown>;
-  timestamp: string;
+  code?: string;
+  field?: string;
+  details?: Record<string, any>;
 }
 
-export interface PaginatedResponse<T = unknown> {
+export interface PaginatedResponse<T> {
   count: number;
   next?: string;
   previous?: string;
   results: T[];
 }
 
-// Form Types
-export interface FormField {
-  name: string;
-  label: string;
-  type: 'text' | 'email' | 'password' | 'select' | 'checkbox' | 'date' | 'tel';
-  required?: boolean;
-  placeholder?: string;
-  options?: Array<{ value: string; label: string }>;
-  validation?: {
-    min?: number;
-    max?: number;
-    pattern?: string;
-    message?: string;
-  };
+// Authentication Types
+export interface LoginCredentials {
+  username: string;
+  password: string;
 }
 
-export interface FormState {
-  isSubmitting: boolean;
-  isValid: boolean;
-  errors: Record<string, string>;
-  touched: Record<string, boolean>;
+export interface LoginResponse {
+  access: string;
+  refresh: string;
+  user: User;
+  tenant?: Tenant;
+  permissions: string[];
+}
+
+export interface AuthState {
+  isAuthenticated: boolean;
+  user: User | null;
+  tenant: Tenant | null;
+  tokens: {
+    access: string | null;
+    refresh: string | null;
+  };
+  permissions: string[];
+  loading: boolean;
+  error: string | null;
 }
 
 // UI State Types
-export interface LoadingState {
-  isLoading: boolean;
-  message?: string;
+export interface UIState {
+  theme: 'light' | 'dark';
+  sidebarOpen: boolean;
+  loading: boolean;
+  notifications: Notification[];
 }
 
-export interface NotificationState {
+export interface Notification {
+  id: string;
   type: 'success' | 'error' | 'warning' | 'info';
-  message: string;
-  duration?: number;
-  id: string;
-}
-
-// Navigation Types
-export interface NavigationItem {
-  id: string;
-  label: string;
-  path: string;
-  icon?: string;
-  permissions: string[];
-  children?: NavigationItem[];
-  badge?: {
-    text: string;
-    color: 'primary' | 'secondary' | 'error' | 'warning' | 'info' | 'success';
-  };
-}
-
-// Dashboard Types
-export interface Widget {
-  id: string;
   title: string;
-  type: 'chart' | 'stat' | 'table' | 'calendar' | 'list';
-  size: 'small' | 'medium' | 'large' | 'full';
-  data?: unknown;
-  config?: Record<string, unknown>;
-  permissions: string[];
+  message: string;
+  timestamp: string;
+  read: boolean;
 }
 
-export interface Dashboard {
-  id: string;
-  name: string;
-  layout: Widget[];
-  isDefault: boolean;
-  permissions: string[];
+// Portal Context
+export type PortalType = 'saas' | 'tenant';
+
+export interface PortalContext {
+  type: PortalType;
+  tenant?: Tenant;
+  subdomain?: string;
 }
 
-// Chart Types
-export interface ChartDataPoint {
-  label: string;
-  value: number;
-  color?: string;
+// Common Component Props
+export interface CommonProps {
+  className?: string;
+  children?: React.ReactNode;
 }
 
-export interface ChartConfig {
-  type: 'line' | 'bar' | 'pie' | 'doughnut' | 'area' | 'scatter';
-  data: ChartDataPoint[];
-  options?: Record<string, unknown>;
-}
-
-// File Types
-export interface FileUpload {
-  id: string;
-  name: string;
-  size: number;
-  type: string;
-  url: string;
-  uploadedAt: string;
-  uploadedBy: string;
-}
-
-// Search Types
-export interface SearchFilter {
+// Form Types
+export interface FormError {
   field: string;
-  operator: 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'like' | 'in' | 'nin';
-  value: unknown;
+  message: string;
 }
 
-export interface SearchParams {
-  query?: string;
-  filters: SearchFilter[];
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
-  page?: number;
-  limit?: number;
+export interface FormState {
+  loading: boolean;
+  errors: FormError[];
+  touched: Record<string, boolean>;
 }
 
-// Export utility types
-export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
-export type RequiredFields<T, K extends keyof T> = T & Required<Pick<T, K>>;
-export type PartialExcept<T, K extends keyof T> = Partial<T> & Pick<T, K>;
-
-// Generic utility types for better type safety
-export type DeepPartial<T> = {
-  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
-};
-
-export type NonEmptyArray<T> = [T, ...T[]];
-
-export type ValueOf<T> = T[keyof T];
-
-export type KeysOfUnion<T> = T extends T ? keyof T : never;

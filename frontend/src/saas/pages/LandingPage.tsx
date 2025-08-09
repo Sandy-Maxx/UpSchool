@@ -1,129 +1,234 @@
 import React from 'react';
-import { Box, Typography, Button, Container, Grid, Card, CardContent } from '@mui/material';
-import { School, Dashboard, Security, Analytics } from '@mui/icons-material';
+import { Box, ThemeProvider, createTheme } from '@mui/material';
+import { motion, AnimatePresence } from 'framer-motion';
+import HeroSection from '../components/landing/HeroSection';
+import FeaturesSection from '../components/landing/FeaturesSection';
 
-const LandingPage: React.FC = () => {
+// Create a custom theme for the landing page
+const landingTheme = createTheme({
+  palette: {
+    mode: 'light',
+    primary: {
+      main: '#2563eb', // Blue
+      dark: '#1d4ed8',
+      light: '#60a5fa',
+    },
+    secondary: {
+      main: '#9333ea', // Purple
+      dark: '#7c2d12',
+      light: '#c084fc',
+    },
+    success: {
+      main: '#059669',
+      dark: '#047857',
+      light: '#34d399',
+    },
+    warning: {
+      main: '#d97706',
+      dark: '#b45309',
+      light: '#fbbf24',
+    },
+    error: {
+      main: '#dc2626',
+      dark: '#b91c1c',
+      light: '#f87171',
+    },
+    info: {
+      main: '#0891b2',
+      dark: '#0e7490',
+      light: '#22d3ee',
+    },
+    background: {
+      default: '#fafafa',
+      paper: '#ffffff',
+    },
+    text: {
+      primary: '#1f2937',
+      secondary: '#6b7280',
+    },
+  },
+  typography: {
+    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+    h1: {
+      fontWeight: 700,
+      letterSpacing: '-0.025em',
+    },
+    h2: {
+      fontWeight: 700,
+      letterSpacing: '-0.025em',
+    },
+    h3: {
+      fontWeight: 600,
+      letterSpacing: '-0.025em',
+    },
+    h4: {
+      fontWeight: 600,
+    },
+    h5: {
+      fontWeight: 600,
+    },
+    h6: {
+      fontWeight: 600,
+    },
+    button: {
+      textTransform: 'none',
+      fontWeight: 600,
+    },
+  },
+  shape: {
+    borderRadius: 12,
+  },
+  shadows: [
+    'none',
+    '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+    '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+    '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+    '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+    '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+  ],
+  components: {
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: 12,
+          textTransform: 'none',
+          fontWeight: 600,
+          fontSize: '0.95rem',
+        },
+        contained: {
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+          '&:hover': {
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+          },
+        },
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          borderRadius: 16,
+          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          borderRadius: 16,
+        },
+      },
+    },
+  },
+});
+
+export const LandingPage: React.FC = () => {
+  const pageVariants = {
+    initial: { opacity: 0 },
+    animate: {
+      opacity: 1,
+      transition: {
+        duration: 0.5,
+        ease: [0.25, 0.1, 0.25, 1] as [number, number, number, number]
+      }
+    },
+    exit: {
+      opacity: 0,
+      transition: {
+        duration: 0.3
+      }
+    }
+  };
+
+  React.useEffect(() => {
+    // Set document title
+    document.title = 'UpSchool - Complete School Management ERP Solution';
+    
+    // Add meta description
+    const metaDescription = document.querySelector('meta[name="description"]');
+    if (metaDescription) {
+      metaDescription.setAttribute(
+        'content',
+        'Transform your school operations with UpSchool - a comprehensive, cloud-based ERP solution for educational institutions. Student management, academics, library, transport & more.'
+      );
+    }
+
+    // Smooth scrolling behavior
+    document.documentElement.style.scrollBehavior = 'smooth';
+
+    return () => {
+      document.documentElement.style.scrollBehavior = 'auto';
+    };
+  }, []);
+
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      {/* Header */}
-      <Box sx={{ bgcolor: 'primary.main', color: 'white', py: 2 }}>
-        <Container maxWidth="lg">
-          <Box display="flex" justifyContent="space-between" alignItems="center">
-            <Typography variant="h4" fontWeight="bold">
-              School ERP Platform
-            </Typography>
-            <Box>
-              <Button color="inherit" sx={{ mr: 2 }}>
-                Login
-              </Button>
-              <Button variant="contained" color="secondary">
-                Get Started
-              </Button>
+    <ThemeProvider theme={landingTheme}>
+      <AnimatePresence mode="wait">
+        <motion.div
+          variants={pageVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+        >
+          <Box
+            sx={{
+              minHeight: '100vh',
+              background: 'linear-gradient(180deg, #fafafa 0%, #f3f4f6 100%)',
+              overflowX: 'hidden',
+            }}
+          >
+            {/* Navigation would go here in future */}
+            
+            {/* Hero Section */}
+            <HeroSection />
+
+            {/* Features Section */}
+            <FeaturesSection />
+
+            {/* Additional sections would go here:
+                - StatsSection
+                - TestimonialsSection  
+                - PricingSection
+                - CTASection
+                - Footer
+            */}
+            
+            {/* Temporary footer */}
+            <Box
+              sx={{
+                py: 4,
+                textAlign: 'center',
+                color: 'text.secondary',
+                borderTop: '1px solid',
+                borderColor: 'divider',
+              }}
+            >
+              <Box sx={{ typography: 'body2' }}>
+                © 2025 UpSchool. All rights reserved.
+              </Box>
             </Box>
           </Box>
-        </Container>
-      </Box>
-
-      {/* Hero Section */}
-      <Container maxWidth="lg" sx={{ py: 8 }}>
-        <Grid container spacing={4} alignItems="center">
-          <Grid item xs={12} md={6}>
-            <Typography variant="h2" fontWeight="bold" gutterBottom>
-              Modern School Management Platform
-            </Typography>
-            <Typography variant="h6" color="text.secondary" paragraph>
-              Comprehensive ERP solution for educational institutions. Manage students, teachers,
-              academics, and operations with our cloud-based platform.
-            </Typography>
-            <Box sx={{ mt: 4 }}>
-              <Button variant="contained" size="large" sx={{ mr: 2 }}>
-                Start Free Trial
-              </Button>
-              <Button variant="outlined" size="large">
-                Learn More
-              </Button>
-            </Box>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Box textAlign="center">
-              <School sx={{ fontSize: 200, color: 'primary.main', opacity: 0.3 }} />
-            </Box>
-          </Grid>
-        </Grid>
-      </Container>
-
-      {/* Features Section */}
-      <Box sx={{ bgcolor: 'grey.50', py: 8 }}>
-        <Container maxWidth="lg">
-          <Typography variant="h3" textAlign="center" fontWeight="bold" gutterBottom>
-            Key Features
-          </Typography>
-          <Grid container spacing={4} sx={{ mt: 4 }}>
-            <Grid item xs={12} md={4}>
-              <Card elevation={2}>
-                <CardContent sx={{ textAlign: 'center', py: 4 }}>
-                  <Dashboard sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
-                  <Typography variant="h5" fontWeight="bold" gutterBottom>
-                    Comprehensive Dashboards
-                  </Typography>
-                  <Typography color="text.secondary">
-                    Role-based dashboards for administrators, teachers, students, and parents.
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <Card elevation={2}>
-                <CardContent sx={{ textAlign: 'center', py: 4 }}>
-                  <Security sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
-                  <Typography variant="h5" fontWeight="bold" gutterBottom>
-                    Advanced Security
-                  </Typography>
-                  <Typography color="text.secondary">
-                    Enterprise-grade RBAC with multi-tenant isolation and data protection.
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <Card elevation={2}>
-                <CardContent sx={{ textAlign: 'center', py: 4 }}>
-                  <Analytics sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
-                  <Typography variant="h5" fontWeight="bold" gutterBottom>
-                    Analytics & Reports
-                  </Typography>
-                  <Typography color="text.secondary">
-                    Powerful analytics and reporting tools for data-driven decisions.
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-        </Container>
-      </Box>
-
-      {/* CTA Section */}
-      <Container maxWidth="lg" sx={{ py: 8, textAlign: 'center' }}>
-        <Typography variant="h3" fontWeight="bold" gutterBottom>
-          Ready to Transform Your School?
-        </Typography>
-        <Typography variant="h6" color="text.secondary" paragraph>
-          Join thousands of schools already using our platform to streamline their operations.
-        </Typography>
-        <Button variant="contained" size="large" sx={{ mt: 2 }}>
-          Get Started Today
-        </Button>
-      </Container>
-
-      {/* Footer */}
-      <Box sx={{ bgcolor: 'grey.900', color: 'white', py: 4 }}>
-        <Container maxWidth="lg">
-          <Typography textAlign="center">
-            © 2024 School ERP Platform. All rights reserved.
-          </Typography>
-        </Container>
-      </Box>
-    </Box>
+        </motion.div>
+      </AnimatePresence>
+    </ThemeProvider>
   );
 };
 
