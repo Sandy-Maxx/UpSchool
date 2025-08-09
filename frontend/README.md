@@ -1,5 +1,7 @@
 # School ERP Frontend
 
+Updated for Stage 2.2: Tenant Authentication System completed with security utilities, RBAC enhancements, and routing wired.
+
 This is a Vite + React + TypeScript frontend scaffold aligned with the backend School ERP.
 
 Quick start:

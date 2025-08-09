@@ -17,6 +17,9 @@ export interface User extends BaseEntity {
   last_login?: string;
   job_title?: string;
   profile_image?: string;
+  user_type?: string;
+  role?: string;
+  portal?: 'saas' | 'tenant';
 }
 
 // Permission Types

@@ -57,7 +57,15 @@ class ApiClient {
     // Request interceptor
     this.client.interceptors.request.use(
       (config) => {
-        return this.addAuthenticationHeaders(config);
+        // Attach auth and portal headers
+        const cfg = this.addAuthenticationHeaders(config)
+        // Attach CSRF for unsafe methods
+        const method = (cfg.method || 'get').toLowerCase()
+        if (['post', 'put', 'patch', 'delete'].includes(method)) {
+          const token = (typeof document !== 'undefined') ? (document.cookie.split('; ').find((c) => c.startsWith('csrftoken='))?.split('=')[1] || null) : null
+          if (token) cfg.headers.set('X-CSRFToken', token)
+        }
+        return cfg;
       },
       (error) => {
         return Promise.reject(this.normalizeError(error));

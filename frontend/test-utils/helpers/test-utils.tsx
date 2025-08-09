@@ -102,3 +102,6 @@ export * from '@testing-library/react'
 
 // override render method
 export { customRender as render }
+
+// Export renderWithProviders as an alias for compatibility
+export { customRender as renderWithProviders }

@@ -48,7 +48,7 @@ export const handlers = [
   }),
 
   http.post('/api/saas/tenants', async ({ request }) => {
-    const tenantData = await request.json()
+    const tenantData = await request.json() as Record<string, any>
     return HttpResponse.json({
       id: '2',
       ...tenantData,

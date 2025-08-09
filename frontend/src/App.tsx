@@ -8,6 +8,7 @@ import LandingPage from './saas/pages/LandingPage'
 import SuperAdminLoginPage from './saas/pages/auth/SuperAdminLoginPage'
 import TenantRegistrationPage from './saas/pages/auth/TenantRegistrationPage'
 import SecurityAuditPage from './saas/pages/admin/SecurityAuditPage'
+import { TenantRoutes } from './tenant/router/TenantRoutes'
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
   const { isAuthenticated } = useAuth()
@@ -45,8 +46,8 @@ function PortalRouter() {
       <Route path="/auth/login" element={<Login />} />
       <Route path="/health" element={<Health />} />
       
-      {/* Tenant Portal Routes (Coming Soon) */}
-      <Route path="/tenant/*" element={<div>Tenant Portal (Coming Soon)</div>} />
+      {/* Tenant Portal Routes */}
+      <Route path="/tenant/*" element={<TenantRoutes />} />
       
       {/* Protected Dashboard Route */}
       <Route

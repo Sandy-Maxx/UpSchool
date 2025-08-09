@@ -520,6 +520,151 @@ test('should load user data', () => {
 });
 ```
 
+### 🏆 Advanced DOM Mocking - SecurityAuditLog Case Study
+
+**Challenge**: Testing CSV export functionality that manipulates DOM elements for file downloads
+
+**Problem**: JSDOM environment doesn't support full DOM manipulation, causing "Failed to execute 'appendChild'" errors
+
+**Solution**: Comprehensive DOM mocking strategy
+
+```javascript
+// Complete DOM mocking setup for export functionality
+describe('SecurityAuditLog Component', () => {
+  let originalCreateElement: typeof document.createElement
+  let createElementSpy: ReturnType<typeof vi.fn> | null = null
+
+  beforeEach(() => {
+    // Preserve original createElement
+    originalCreateElement = document.createElement.bind(document)
+
+    // Create comprehensive mock anchor element
+    const mockAnchor = {
+      setAttribute: vi.fn(),
+      click: vi.fn(),
+      // Critical: Add Node properties for JSDOM compatibility
+      nodeType: Node.ELEMENT_NODE,
+      nodeName: 'A',
+      tagName: 'A',
+      href: '',
+    } as unknown as HTMLAnchorElement
+
+    // Mock createElement for anchor elements only
+    createElementSpy = vi.fn((tagName: any, options?: any) => {
+      if (typeof tagName === 'string' && tagName.toLowerCase() === 'a') {
+        return mockAnchor
+      }
+      return originalCreateElement(tagName, options as any)
+    })
+
+    document.createElement = createElementSpy
+
+    // Mock DOM manipulation methods to prevent JSDOM errors
+    document.body.appendChild = vi.fn().mockImplementation((node: Node) => node)
+    document.body.removeChild = vi.fn().mockImplementation((node: Node) => node)
+  })
+
+  afterEach(() => {
+    // Always restore original methods
+    if (originalCreateElement) {
+      document.createElement = originalCreateElement
+    }
+    createElementSpy = null
+  })
+
+  test('should handle CSV export with DOM manipulation', async () => {
+    renderWithTestProviders(<SecurityAuditLog />)
+    await flushTimers(1100) // Wait for component to load
+    
+    const exportButton = screen.getByRole('button', { name: /export csv/i })
+    await user.click(exportButton)
+    
+    // Verify DOM manipulation was attempted
+    expect(document.createElement).toHaveBeenCalledWith('a')
+    expect(document.body.appendChild).toHaveBeenCalled()
+    expect(document.body.removeChild).toHaveBeenCalled()
+  })
+})
+```
+
+### 🎭 Advanced MUI Component Mocking
+
+**Challenge**: MUI Tooltip components cause async act() warnings due to internal state transitions
+
+**Solution**: Strategic component mocking
+
+```javascript
+// Mock problematic MUI components to avoid act warnings
+vi.mock('@mui/material/Tooltip', () => ({
+  __esModule: true,
+  default: ({ children }: any) => <>{children}</>,
+}))
+
+// Mock framer-motion for animation testing
+vi.mock('framer-motion', () => ({
+  motion: {
+    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+  },
+}))
+
+// Custom timer helper for complex async operations
+const flushTimers = async (ms = 0) => {
+  if (ms > 0) {
+    await new Promise(resolve => setTimeout(resolve, ms))
+  }
+  // Flush microtasks
+  await Promise.resolve()
+}
+```
+
+### 🔄 Complex State Management Testing
+
+**Pattern**: Testing components with multiple loading states and data dependencies
+
+```javascript
+test('should handle complex loading states with data dependencies', async () => {
+  renderWithTestProviders(<SecurityAuditLog />)
+  
+  // Verify initial loading state
+  expect(await screen.findByText('Loading security events...')).toBeInTheDocument()
+  
+  // Wait for simulated API delay
+  await flushTimers(1100)
+  
+  // Verify loading completion and data display
+  await waitFor(() => {
+    expect(screen.queryByText('Loading security events...')).not.toBeInTheDocument()
+  })
+  
+  // Verify table headers are rendered
+  expect(await screen.findByText('Timestamp')).toBeInTheDocument()
+  expect(await screen.findByText('Event Type')).toBeInTheDocument()
+  expect(await screen.findByText('Severity')).toBeInTheDocument()
+})
+```
+
+### 📊 Test Metrics from SecurityAuditLog Implementation
+
+**Results**: 38 comprehensive tests covering all component functionality
+- **Initial Rendering**: 4 tests ✅
+- **Data Loading**: 3 tests ✅ 
+- **Search Functionality**: 4 tests ✅
+- **Filter Functionality**: 6 tests ✅
+- **Pagination**: 3 tests ✅
+- **Event Detail Dialog**: 4 tests ✅
+- **Export Functionality**: 3 tests ✅ (DOM mocking)
+- **Accessibility**: 4 tests ✅
+- **Responsive Design**: 2 tests ✅
+- **Performance**: 2 tests ✅
+- **Error Handling**: 1 test ✅
+- **Additional Coverage**: 2 tests ✅
+
+**Key Learnings**:
+1. DOM mocking requires comprehensive Node property setup
+2. MUI component mocking prevents act() warnings
+3. Async testing patterns ensure reliable test execution
+4. Strategic component isolation improves test stability
+
 ---
 
 ## 🤖 Test Automation Scripts
