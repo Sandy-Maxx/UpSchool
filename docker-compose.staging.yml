@@ -1,0 +1,194 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database for Staging
+  db:
+    image: postgres:15-alpine
+    restart: always
+    volumes:
+      - postgres_staging_data:/var/lib/postgresql/data/
+      - ./backend/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    environment:
+      - POSTGRES_DB=school_erp_staging
+      - POSTGRES_USER=school_erp_user
+      - POSTGRES_PASSWORD=staging_password
+    ports:
+      - "5432:5432"
+    networks:
+      - staging_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U school_erp_user -d school_erp_staging"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Redis Cache & Session Store
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_staging_data:/data
+    networks:
+      - staging_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+
+  # Django Backend Application
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.production
+    restart: always
+    volumes:
+      - ./backend:/app
+      - static_staging_volume:/app/staticfiles
+      - media_staging_volume:/app/media
+      - logs_staging_volume:/app/logs
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env.staging
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - staging_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    command: ["web"]
+
+  # Celery Worker for Background Tasks
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.production
+    restart: always
+    volumes:
+      - ./backend:/app
+      - media_staging_volume:/app/media
+      - logs_staging_volume:/app/logs
+    env_file:
+      - ./backend/.env.staging
+    depends_on:
+      - db
+      - redis
+    networks:
+      - staging_network
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A school_platform inspect ping"]
+      interval: 60s
+      timeout: 20s
+      retries: 3
+      start_period: 80s
+    command: ["celery-worker"]
+
+  # Celery Beat Scheduler
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.production
+    restart: always
+    volumes:
+      - ./backend:/app
+      - logs_staging_volume:/app/logs
+    env_file:
+      - ./backend/.env.staging
+    depends_on:
+      - db
+      - redis
+    networks:
+      - staging_network
+    command: ["celery-beat"]
+
+  # React Frontend Application
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - staging_network
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+      - REACT_APP_ENVIRONMENT=staging
+
+  # Monitoring - Prometheus (optional for staging)
+  prometheus:
+    image: prom/prometheus:latest
+    restart: always
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_staging_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    networks:
+      - staging_network
+    profiles:
+      - monitoring
+
+  # Monitoring - Grafana (optional for staging)
+  grafana:
+    image: grafana/grafana:latest
+    restart: always
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_staging_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=staging_grafana_admin
+    networks:
+      - staging_network
+    profiles:
+      - monitoring
+
+volumes:
+  postgres_staging_data:
+    driver: local
+  redis_staging_data:
+    driver: local
+  static_staging_volume:
+    driver: local
+  media_staging_volume:
+    driver: local
+  logs_staging_volume:
+    driver: local
+  prometheus_staging_data:
+    driver: local
+  grafana_staging_data:
+    driver: local
+
+networks:
+  staging_network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.25.0.0/16

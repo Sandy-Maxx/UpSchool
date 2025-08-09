@@ -1,0 +1,96 @@
+{
+  "name": "school-erp-frontend",
+  "version": "1.0.0",
+  "description": "Modern React TypeScript frontend for Multi-Tenant School ERP Platform",
+  "private": true,
+  "dependencies": {
+    "@craco/craco": "^7.1.0",
+    "@emotion/react": "^11.11.1",
+    "@emotion/styled": "^11.11.0",
+    "@hookform/resolvers": "^5.2.1",
+    "@mui/icons-material": "^5.14.19",
+    "@mui/material": "^5.14.20",
+    "@mui/x-data-grid": "^6.18.2",
+    "@mui/x-date-pickers": "^6.18.2",
+    "@reduxjs/toolkit": "^1.9.7",
+    "@tanstack/react-query": "^5.8.4",
+    "@tanstack/react-table": "^8.10.7",
+    "@types/node": "^20.8.10",
+    "@types/react": "^18.2.37",
+    "@types/react-countup": "^4.3.0",
+    "@types/react-dom": "^18.2.15",
+    "axios": "^1.6.0",
+    "chart.js": "^4.4.0",
+    "date-fns": "^2.30.0",
+    "formik": "^2.4.5",
+    "framer-motion": "^10.16.5",
+    "lucide-react": "^0.537.0",
+    "react": "^18.2.0",
+    "react-chartjs-2": "^5.2.0",
+    "react-countup": "^6.5.3",
+    "react-dom": "^18.2.0",
+    "react-hook-form": "^7.47.0",
+    "react-redux": "^8.1.3",
+    "react-router-dom": "^6.18.0",
+    "react-scripts": "5.0.1",
+    "recharts": "^2.8.0",
+    "redux-persist": "^6.0.0",
+    "swiper": "^11.2.10",
+    "typescript": "^4.9.5",
+    "yup": "^1.3.3",
+    "zustand": "^4.4.6"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.1.4",
+    "@testing-library/react": "^13.4.0",
+    "@testing-library/user-event": "^14.5.1",
+    "@types/jest": "^29.5.8",
+    "@types/redux-mock-store": "^1.0.6",
+    "@types/testing-library__jest-dom": "^5.14.9",
+    "abort-controller": "^3.0.0",
+    "eslint": "^8.52.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-prettier": "^5.0.1",
+    "jest-environment-jsdom": "^29.7.0",
+    "msw": "^2.10.4",
+    "node-fetch": "^3.3.2",
+    "prettier": "^3.0.3",
+    "redux-mock-store": "^1.5.4",
+    "web-streams-polyfill": "^4.1.0"
+  },
+  "scripts": {
+    "start": "craco start",
+    "build": "craco build",
+"test": "craco test --watchAll=false --testPathIgnorePatterns=src/tests/integration",
+    "test:unit": "craco test --watchAll=false --testPathPattern=src.*\\.(spec|test)\\.(ts|tsx)$ --testPathIgnorePatterns=src/tests/(integration|e2e|security)",
+    "test:integration": "craco test --watchAll=false --testPathPattern=src/tests/integration",
+    "test:security": "craco test --watchAll=false --testPathPattern=src/tests/security",
+    "test:coverage": "craco test --watchAll=false --coverage --testPathIgnorePatterns='src/tests/e2e'",
+    "test:watch": "craco test",
+    "test:debug": "craco --inspect-brk test --runInBand --no-cache",
+    "type-check": "tsc --noEmit",
+    "eject": "react-scripts eject",
+    "lint": "eslint src --ext .ts,.tsx",
+    "lint:fix": "eslint src --ext .ts,.tsx --fix",
+    "format": "prettier --write src/**/*.{ts,tsx,js,jsx,json,css,md}"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "proxy": "http://localhost:8000"
+}
